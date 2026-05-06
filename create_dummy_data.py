@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from app.database import Base, engine, SessionLocal
-from app.models.kubereats import MerchantInfo, Menu, UserInfo, Order, Finance
+from app.models.kubereats import Finance, Menu, MerchantInfo, Order, OrderItem, UserInfo
 
 
 def seed():
@@ -55,6 +55,10 @@ def seed():
         )
 
         db.add_all([menu_1, menu_2, menu_3])
+        db.commit()
+        db.refresh(menu_1)
+        db.refresh(menu_2)
+        db.refresh(menu_3)
 
         user_1 = UserInfo(
             username="admin",
@@ -91,6 +95,32 @@ def seed():
         db.commit()
         db.refresh(order_1)
         db.refresh(order_2)
+
+        order_item_1 = OrderItem(
+            order_id=order_1.id,
+            menu_id=menu_1.id,
+            quantity=1,
+            unit_price=Decimal("120.00"),
+            subtotal=Decimal("120.00"),
+        )
+
+        order_item_2 = OrderItem(
+            order_id=order_2.id,
+            menu_id=menu_2.id,
+            quantity=1,
+            unit_price=Decimal("110.00"),
+            subtotal=Decimal("110.00"),
+        )
+
+        order_item_3 = OrderItem(
+            order_id=order_2.id,
+            menu_id=menu_3.id,
+            quantity=1,
+            unit_price=Decimal("75.00"),
+            subtotal=Decimal("75.00"),
+        )
+
+        db.add_all([order_item_1, order_item_2, order_item_3])
 
         finance_1 = Finance(
             merchant_id=merchant_1.id,

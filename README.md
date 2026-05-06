@@ -167,6 +167,7 @@ Current tables:
 | `menu` | Menu items sold by merchants |
 | `user_info` | Users, staff, admins, and merchants |
 | `orders` | User orders |
+| `order_items` | Menu items included in each order |
 | `finance` | Merchant settlement and order finance data |
 
 During development, tables are created automatically in `app/main.py`:
