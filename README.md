@@ -44,13 +44,19 @@ HTTP request
 
 Layer responsibilities:
 
-| Layer | Responsibility |
-| --- | --- |
-| `routes/` | Receive HTTP requests and return HTTP responses |
-| `services/` | Handle business logic |
-| `repositories/` | Query and mutate PostgreSQL data |
-| `models/` | Define SQLAlchemy database tables |
-| `schemas/` | Define Pydantic request and response shapes |
+Route = API 門口
+Service = 商業邏輯
+Repository = 資料庫操作
+Schema = request / response 格式
+Model = database table
+
+| Layer             | Responsibility                                  |
+| ----------------- | ----------------------------------------------- |
+| `routes/`       | Receive HTTP requests and return HTTP responses |
+| `services/`     | Handle business logic                           |
+| `repositories/` | Query and mutate PostgreSQL data                |
+| `models/`       | Define SQLAlchemy database tables               |
+| `schemas/`      | Define Pydantic request and response shapes     |
 
 ## Requirements
 
@@ -161,14 +167,14 @@ app/models/kubereats.py
 
 Current tables:
 
-| Table | Purpose |
-| --- | --- |
-| `merchant_info` | Merchant profile and audit status |
-| `menu` | Menu items sold by merchants |
-| `user_info` | Users, staff, admins, and merchants |
-| `orders` | User orders |
-| `order_items` | Menu items included in each order |
-| `finance` | Merchant settlement and order finance data |
+| Table             | Purpose                                    |
+| ----------------- | ------------------------------------------ |
+| `merchant_info` | Merchant profile and audit status          |
+| `menu`          | Menu items sold by merchants               |
+| `user_info`     | Users, staff, admins, and merchants        |
+| `orders`        | User orders                                |
+| `order_items`   | Menu items included in each order          |
+| `finance`       | Merchant settlement and order finance data |
 
 During development, tables are created automatically in `app/main.py`:
 

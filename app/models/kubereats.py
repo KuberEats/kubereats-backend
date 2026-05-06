@@ -20,6 +20,13 @@ class MerchantInfo(TimestampMixin, Base):
 
     id = Column(Integer, primary_key=True, index=True)
     merchant_name = Column(String(100), nullable=False)
+    campus = Column(String(20), nullable=False)
+    category = Column(String(50), nullable=False)
+    rating = Column(Numeric(2, 1), default=0, nullable=False)
+    order_count = Column(Integer, default=0, nullable=False)
+    min_order = Column(Numeric(10, 2), default=0, nullable=False)
+    delivery_time = Column(String(50), nullable=False)
+    tags = Column(JSON, default=list, nullable=False)
     audit_status = Column(Integer, default=0, nullable=False)
 
     menus = relationship(

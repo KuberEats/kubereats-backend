@@ -16,19 +16,69 @@ def seed():
             return
 
         merchant_1 = MerchantInfo(
-            merchant_name="Tingwei Bento",
+            merchant_name="阿明便當",
+            campus="竹科",
+            category="台式便當",
+            rating=Decimal("4.8"),
+            order_count=126,
+            min_order=Decimal("80.00"),
+            delivery_time="25-35 分鐘",
+            tags=["熱賣", "雞腿飯", "可團訂"],
             audit_status=1,
         )
 
         merchant_2 = MerchantInfo(
-            merchant_name="Kubereats Cafe",
+            merchant_name="小森咖哩",
+            campus="竹科",
+            category="日式咖哩",
+            rating=Decimal("4.6"),
+            order_count=92,
+            min_order=Decimal("120.00"),
+            delivery_time="30-40 分鐘",
+            tags=["人氣", "咖哩飯", "今日可訂"],
             audit_status=1,
         )
 
-        db.add_all([merchant_1, merchant_2])
+        merchant_3 = MerchantInfo(
+            merchant_name="清爽蔬食盒",
+            campus="竹科",
+            category="健康餐盒",
+            rating=Decimal("4.7"),
+            order_count=76,
+            min_order=Decimal("100.00"),
+            delivery_time="20-30 分鐘",
+            tags=["低卡", "蔬食", "午餐推薦"],
+            audit_status=1,
+        )
+
+        merchant_4 = MerchantInfo(
+            merchant_name="南科牛肉麵",
+            campus="南科",
+            category="麵食",
+            rating=Decimal("4.5"),
+            order_count=88,
+            min_order=Decimal("90.00"),
+            delivery_time="30-45 分鐘",
+            tags=["牛肉麵", "湯麵", "多人訂購"],
+            audit_status=1,
+        )
+
+        merchant_5 = MerchantInfo(
+            merchant_name="中科港式燒臘",
+            campus="中科",
+            category="港式",
+            rating=Decimal("4.4"),
+            order_count=104,
+            min_order=Decimal("95.00"),
+            delivery_time="25-35 分鐘",
+            tags=["燒臘", "三寶飯", "熱門"],
+            audit_status=1,
+        )
+
+        db.add_all([merchant_1, merchant_2, merchant_3, merchant_4, merchant_5])
         db.commit()
-        db.refresh(merchant_1)
-        db.refresh(merchant_2)
+        for merchant in [merchant_1, merchant_2, merchant_3, merchant_4, merchant_5]:
+            db.refresh(merchant)
 
         menu_1 = Menu(
             merchant_id=merchant_1.id,
@@ -48,17 +98,40 @@ def seed():
 
         menu_3 = Menu(
             merchant_id=merchant_2.id,
-            item_name="Iced Latte",
+            item_name="起司豬排咖哩",
             max_daily_quantity=80,
-            image_id="iced-latte.jpg",
-            price=Decimal("75.00"),
+            image_id="pork-curry.jpg",
+            price=Decimal("150.00"),
         )
 
-        db.add_all([menu_1, menu_2, menu_3])
+        menu_4 = Menu(
+            merchant_id=merchant_3.id,
+            item_name="舒肥雞胸餐盒",
+            max_daily_quantity=35,
+            image_id="chicken-salad-box.jpg",
+            price=Decimal("130.00"),
+        )
+
+        menu_5 = Menu(
+            merchant_id=merchant_4.id,
+            item_name="紅燒牛肉麵",
+            max_daily_quantity=45,
+            image_id="beef-noodle.jpg",
+            price=Decimal("140.00"),
+        )
+
+        menu_6 = Menu(
+            merchant_id=merchant_5.id,
+            item_name="三寶飯",
+            max_daily_quantity=60,
+            image_id="bbq-rice.jpg",
+            price=Decimal("115.00"),
+        )
+
+        db.add_all([menu_1, menu_2, menu_3, menu_4, menu_5, menu_6])
         db.commit()
-        db.refresh(menu_1)
-        db.refresh(menu_2)
-        db.refresh(menu_3)
+        for menu in [menu_1, menu_2, menu_3, menu_4, menu_5, menu_6]:
+            db.refresh(menu)
 
         user_1 = UserInfo(
             username="admin",
@@ -87,7 +160,7 @@ def seed():
 
         order_2 = Order(
             user_id=user_2.id,
-            total_amount=Decimal("185.00"),
+            total_amount=Decimal("150.00"),
             order_status=0,
         )
 
@@ -106,21 +179,13 @@ def seed():
 
         order_item_2 = OrderItem(
             order_id=order_2.id,
-            menu_id=menu_2.id,
-            quantity=1,
-            unit_price=Decimal("110.00"),
-            subtotal=Decimal("110.00"),
-        )
-
-        order_item_3 = OrderItem(
-            order_id=order_2.id,
             menu_id=menu_3.id,
             quantity=1,
-            unit_price=Decimal("75.00"),
-            subtotal=Decimal("75.00"),
+            unit_price=Decimal("150.00"),
+            subtotal=Decimal("150.00"),
         )
 
-        db.add_all([order_item_1, order_item_2, order_item_3])
+        db.add_all([order_item_1, order_item_2])
 
         finance_1 = Finance(
             merchant_id=merchant_1.id,
@@ -144,19 +209,14 @@ def seed():
             report_data={
                 "items": [
                     {
-                        "name": "Iced Latte",
+                        "name": "起司豬排咖哩",
                         "quantity": 1,
-                        "price": 75,
-                    },
-                    {
-                        "name": "Pork Rice",
-                        "quantity": 1,
-                        "price": 110,
+                        "price": 150,
                     },
                 ],
                 "payment_method": "credit_card",
             },
-            settlement_amount=Decimal("166.50"),
+            settlement_amount=Decimal("135.00"),
         )
 
         db.add_all([finance_1, finance_2])
