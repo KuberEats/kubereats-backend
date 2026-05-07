@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date as Date
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -28,11 +28,11 @@ def get_menu_service(db: Session = Depends(get_db)):
 @router.get("", response_model=list[MerchantListItem])
 def list_restaurants_for_order_page(
     campus: Campus,
-    date: date,
+    date: Date | None = None,
     sort_by: MerchantSortKey = Query(default="recommend"),
     service: MerchantService = Depends(get_merchant_service),
 ):
-    return service.list_restaurants_for_order_page(campus, date, sort_by)
+    return service.list_restaurants_for_order_page(campus, date or Date.today(), sort_by)
 
 
 @router.get("/{merchant_id}", response_model=MerchantDetail)

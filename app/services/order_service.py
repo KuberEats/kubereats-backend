@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from app.models.kubereats import Finance, Order, OrderItem
 from app.repo.menu_repo import MenuRepository
 from app.repo.order_repo import OrderRepository
-from app.schemas.order import OrderCreate
+from app.schemas.order import OrderCreate, OrderHistorySortKey
 
 
 class OrderService:
@@ -69,6 +69,19 @@ class OrderService:
             raise HTTPException(status_code=404, detail="Order not found")
 
         return self._serialize_order(order)
+
+    def list_orders_by_user(self, user_id: int, sort_by: OrderHistorySortKey):
+        user = self.order_repo.get_user_by_id(user_id)
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        orders = self.order_repo.list_by_user_id(user_id)
+
+        if sort_by == "merchant":
+            orders = sorted(orders, key=self._primary_merchant_name)
+
+        return [self._serialize_order(order) for order in orders]
 
     def update_order_status(self, order_id: int, order_status: int):
         order = self.order_repo.get_by_id(order_id)
@@ -189,6 +202,12 @@ class OrderService:
             )
 
         return finance_records
+
+    def _primary_merchant_name(self, order):
+        merchant_names = sorted(
+            finance.merchant.merchant_name for finance in order.finance_records
+        )
+        return merchant_names[0] if merchant_names else ""
 
     def _serialize_order(self, order):
         return {

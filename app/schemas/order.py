@@ -5,6 +5,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 OrderStatus = Literal[0, 1, 2]
+OrderHistorySortKey = Literal["time", "merchant"]
 
 
 class OrderItemCreate(BaseModel):

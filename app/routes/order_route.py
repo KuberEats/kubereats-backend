@@ -1,10 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.repo.menu_repo import MenuRepository
 from app.repo.order_repo import OrderRepository
-from app.schemas.order import OrderCreate, OrderResponse, OrderStatusUpdate
+from app.schemas.order import (
+    OrderCreate,
+    OrderHistorySortKey,
+    OrderResponse,
+    OrderStatusUpdate,
+)
 from app.services.order_service import OrderService
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
@@ -23,6 +28,15 @@ def create_order(
     service: OrderService = Depends(get_order_service),
 ):
     return service.create_order(order_data)
+
+
+@router.get("", response_model=list[OrderResponse])
+def list_orders(
+    user_id: int = Query(alias="userId"),
+    sort_by: OrderHistorySortKey = Query(default="time", alias="sortBy"),
+    service: OrderService = Depends(get_order_service),
+):
+    return service.list_orders_by_user(user_id, sort_by)
 
 
 @router.get("/{order_id}", response_model=OrderResponse)

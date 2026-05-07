@@ -36,6 +36,18 @@ class OrderRepository:
             .first()
         )
 
+    def list_by_user_id(self, user_id: int):
+        return (
+            self.db.query(Order)
+            .options(
+                joinedload(Order.items).joinedload(OrderItem.menu),
+                joinedload(Order.finance_records).joinedload(Finance.merchant),
+            )
+            .filter(Order.user_id == user_id)
+            .order_by(Order.order_time.desc())
+            .all()
+        )
+
     def commit(self):
         self.db.commit()
 
