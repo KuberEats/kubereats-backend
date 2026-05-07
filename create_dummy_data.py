@@ -1,7 +1,37 @@
+from datetime import date
 from decimal import Decimal
 
+from sqlalchemy import text
+
 from app.database import Base, engine, SessionLocal
-from app.models.kubereats import Finance, Menu, MerchantInfo, Order, OrderItem, UserInfo
+from app.models.kubereats import (
+    Finance,
+    Menu,
+    MenuDailyCapacity,
+    MerchantInfo,
+    Order,
+    OrderItem,
+    UserInfo,
+)
+
+
+def clear_all_data(db):
+    db.execute(
+        text(
+            """
+            TRUNCATE TABLE
+                finance,
+                order_items,
+                orders,
+                menu_daily_capacity,
+                menu,
+                merchant_info,
+                user_info
+            RESTART IDENTITY CASCADE
+            """
+        )
+    )
+    db.commit()
 
 
 def seed():
@@ -10,10 +40,7 @@ def seed():
     db = SessionLocal()
 
     try:
-        existing_user = db.query(UserInfo).filter(UserInfo.username == "admin").first()
-        if existing_user:
-            print("Dummy data already exists.")
-            return
+        clear_all_data(db)
 
         merchant_1 = MerchantInfo(
             merchant_name="阿明便當",
@@ -133,6 +160,49 @@ def seed():
         for menu in [menu_1, menu_2, menu_3, menu_4, menu_5, menu_6]:
             db.refresh(menu)
 
+        today = date.today()
+        capacities = [
+            MenuDailyCapacity(
+                menu_id=menu_1.id,
+                target_date=today,
+                max_quantity=menu_1.max_daily_quantity,
+                remaining_quantity=menu_1.max_daily_quantity,
+            ),
+            MenuDailyCapacity(
+                menu_id=menu_2.id,
+                target_date=today,
+                max_quantity=menu_2.max_daily_quantity,
+                remaining_quantity=menu_2.max_daily_quantity,
+            ),
+            MenuDailyCapacity(
+                menu_id=menu_3.id,
+                target_date=today,
+                max_quantity=menu_3.max_daily_quantity,
+                remaining_quantity=menu_3.max_daily_quantity,
+            ),
+            MenuDailyCapacity(
+                menu_id=menu_4.id,
+                target_date=today,
+                max_quantity=menu_4.max_daily_quantity,
+                remaining_quantity=menu_4.max_daily_quantity,
+            ),
+            MenuDailyCapacity(
+                menu_id=menu_5.id,
+                target_date=today,
+                max_quantity=menu_5.max_daily_quantity,
+                remaining_quantity=menu_5.max_daily_quantity,
+            ),
+            MenuDailyCapacity(
+                menu_id=menu_6.id,
+                target_date=today,
+                max_quantity=menu_6.max_daily_quantity,
+                remaining_quantity=menu_6.max_daily_quantity,
+            ),
+        ]
+
+        db.add_all(capacities)
+        db.commit()
+
         user_1 = UserInfo(
             username="admin",
             hashed_password="fake_hashed_password",
@@ -222,7 +292,7 @@ def seed():
         db.add_all([finance_1, finance_2])
         db.commit()
 
-        print("Dummy data created successfully.")
+        print("Dummy data reset and created successfully.")
 
     finally:
         db.close()

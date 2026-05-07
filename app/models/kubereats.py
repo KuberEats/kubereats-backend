@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, Numeric, String, Text
+from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -49,6 +49,23 @@ class Menu(TimestampMixin, Base):
 
     merchant = relationship("MerchantInfo", back_populates="menus")
     order_items = relationship("OrderItem", back_populates="menu")
+
+
+# Isolated table to track daily capacity of each menu item, separate from Menu to avoid concurrency issues when multiple orders are placed simultaneously.
+class MenuDailyCapacity(TimestampMixin, Base):
+    __tablename__ = "menu_daily_capacity"
+    __table_args__ = (
+        UniqueConstraint("menu_id", "target_date", name="uq_menu_daily_capacity_menu_date"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    menu_id = Column(Integer, ForeignKey("menu.id"), nullable=False)
+    target_date = Column(Date, nullable=False)
+    max_quantity = Column(Integer, nullable=False)
+    remaining_quantity = Column(Integer, nullable=False)
+
+    menu = relationship("Menu")
+
 
 
 class UserInfo(TimestampMixin, Base):

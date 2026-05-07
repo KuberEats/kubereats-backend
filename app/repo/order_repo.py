@@ -1,6 +1,9 @@
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import update
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import Session, joinedload
 
-from app.models.kubereats import Finance, Order, OrderItem, UserInfo
+from app.models.kubereats import Finance, MenuDailyCapacity, Order, OrderItem, UserInfo
 
 
 class OrderRepository:
@@ -47,6 +50,45 @@ class OrderRepository:
             .order_by(Order.order_time.desc())
             .all()
         )
+        
+    def ensure_menu_daily_capacities(self, menus, target_date):
+        rows = [
+            {
+                "menu_id": menu.id,
+                "target_date": target_date,
+                "max_quantity": menu.max_daily_quantity,
+                "remaining_quantity": menu.max_daily_quantity,
+            }
+            for menu in menus
+        ]
+
+        if not rows:
+            return
+
+        statement = insert(MenuDailyCapacity).values(rows)
+        statement = statement.on_conflict_do_nothing(
+            index_elements=["menu_id", "target_date"]
+        )
+        self.db.execute(statement)
+        self.db.flush()
+
+    def deduct_menu_daily_capacity(self, menu_id: int, target_date, quantity: int):
+        statement = (
+            update(MenuDailyCapacity)
+            .where(
+                MenuDailyCapacity.menu_id == menu_id,
+                MenuDailyCapacity.target_date == target_date,
+                MenuDailyCapacity.remaining_quantity >= quantity,
+            )
+            .values(
+                remaining_quantity=MenuDailyCapacity.remaining_quantity - quantity
+            )
+        )
+
+        result = self.db.execute(statement)
+        self.db.flush()
+        return result.rowcount == 1
+
 
     def commit(self):
         self.db.commit()

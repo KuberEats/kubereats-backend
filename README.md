@@ -171,6 +171,7 @@ Current tables:
 | ----------------- | ------------------------------------------ |
 | `merchant_info` | Merchant profile and audit status          |
 | `menu`          | Menu items sold by merchants               |
+| `menu_daily_capacity` | Per-menu daily max and remaining quantity |
 | `user_info`     | Users, staff, admins, and merchants        |
 | `orders`        | User orders                                |
 | `order_items`   | Menu items included in each order          |
@@ -201,13 +202,21 @@ uv run python create_dummy_data.py
 Expected output:
 
 ```txt
-Dummy data created successfully.
+Dummy data reset and created successfully.
 ```
 
-If dummy data already exists:
+The script clears existing dummy tables, resets ids, and creates fresh sample data again.
 
-```txt
-Dummy data already exists.
+To run the same script inside Docker, start PostgreSQL and the backend from the project root:
+
+```sh
+docker compose up -d postgres backend
+```
+
+Then run:
+
+```sh
+docker compose exec backend python create_dummy_data.py
 ```
 
 ## Inspect PostgreSQL Data
@@ -229,6 +238,7 @@ Query data:
 ```sql
 SELECT * FROM merchant_info;
 SELECT * FROM menu;
+SELECT * FROM menu_daily_capacity;
 SELECT * FROM user_info;
 SELECT * FROM orders;
 SELECT * FROM finance;

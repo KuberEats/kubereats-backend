@@ -1,5 +1,7 @@
 from collections import defaultdict
 from decimal import Decimal
+from datetime import date
+
 
 from fastapi import HTTPException
 
@@ -31,8 +33,18 @@ class OrderService:
         menus = self._load_menus(menu_quantity_map)
         total_amount = self._calculate_total_amount(menu_quantity_map, menus)
         self._validate_merchant_min_orders(menu_quantity_map, menus)
+        
+        target_date = date.today()
 
         try:
+            # Ensure daily capacity records exist for all involved menu items before proceeding with order creation to prevent concurrency issues.
+            self.order_repo.ensure_menu_daily_capacities(
+                menus.values(),
+                target_date,
+            )
+
+            self._deduct_daily_capacities(menu_quantity_map, menus, target_date)
+
             order = self.order_repo.create_order(
                 Order(
                     user_id=order_data.user_id,
@@ -164,6 +176,21 @@ class OrderService:
                 raise HTTPException(
                     status_code=400,
                     detail=f"{merchant.merchant_name} minimum order is {merchant.min_order}",
+                )
+
+    def _deduct_daily_capacities(self, menu_quantity_map, menus, target_date):
+        for menu_id, quantity in menu_quantity_map.items():
+            menu = menus[menu_id]
+            deducted = self.order_repo.deduct_menu_daily_capacity(
+                menu.id,
+                target_date,
+                quantity,
+            )
+
+            if not deducted:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{menu.item_name} exceeds remaining daily quantity",
                 )
 
     def _build_finance_records(self, order_id: int, menu_quantity_map, menus):
