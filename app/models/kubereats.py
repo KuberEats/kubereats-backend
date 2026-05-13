@@ -61,6 +61,7 @@ class MerchantInfo(TimestampMixin, Base):
     rating = Column(Numeric(2, 1), default=0, nullable=False)
     order_count = Column(Integer, default=0, nullable=False)
     min_order = Column(Numeric(10, 2), default=0, nullable=False)
+    max_order_quantity = Column(Integer, default=0, nullable=False)
     delivery_time = Column(String(50), nullable=False)
     tags = Column(JSON, default=list, nullable=False)
     audit_status = Column(Integer, default=0, nullable=False)  # 0=pending, 1=approved, 2=rejected

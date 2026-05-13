@@ -12,6 +12,7 @@ class MerchantReviewResponse(BaseModel):
     campus: str
     category: str
     min_order: float = Field(serialization_alias="minOrder")
+    max_order_quantity: int = Field(serialization_alias="maxOrderQuantity")
     delivery_time: str = Field(serialization_alias="deliveryTime")
     tags: list[str]
     audit_status: int = Field(serialization_alias="auditStatus")

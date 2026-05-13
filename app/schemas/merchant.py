@@ -23,6 +23,10 @@ class MerchantApplyRequest(BaseModel):
         max_length=50,
         validation_alias=AliasChoices("delivery_time", "deliveryTime"),
     )
+    max_order_quantity: int = Field(
+        default=0,
+        validation_alias=AliasChoices("max_order_quantity", "maxOrderQuantity"),
+    )
     tags: list[str] = Field(default_factory=list)
 
 
@@ -45,6 +49,10 @@ class MerchantUpdateRequest(BaseModel):
         max_length=50,
         validation_alias=AliasChoices("delivery_time", "deliveryTime"),
     )
+    max_order_quantity: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("max_order_quantity", "maxOrderQuantity"),
+    )
     tags: list[str] | None = None
 
 
@@ -59,6 +67,7 @@ class MerchantResponse(BaseModel):
     rating: float
     order_count: int = Field(serialization_alias="orderCount")
     min_order: float = Field(serialization_alias="minOrder")
+    max_order_quantity: int = Field(serialization_alias="maxOrderQuantity")
     delivery_time: str = Field(serialization_alias="deliveryTime")
     tags: list[str]
     audit_status: int = Field(serialization_alias="auditStatus")
