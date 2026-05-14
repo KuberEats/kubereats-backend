@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import (
+    Boolean, Column, DateTime, ForeignKey, Integer, String,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -22,7 +24,7 @@ class UserInfo(TimestampMixin, Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=True)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(String(20), nullable=False)  # "employee" | "merchant" | "committee"
+    role = Column(String(20), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
 
     refresh_tokens = relationship(

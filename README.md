@@ -1,4 +1,6 @@
-# KuberEats Backend - Authentication Module
+# KuberEats Auth Service
+
+認證服務 — 負責使用者註冊、登入、JWT token 發放與刷新。
 
 ## Tech Stack
 
@@ -12,10 +14,10 @@
 
 ```
 app/
-├── main.py                  # FastAPI entry point
+├── main.py                  # FastAPI entry point (auth_router only)
 ├── database.py              # SQLAlchemy engine & session
 ├── core/
-│   ├── security.py          # JWT sign/verify, bcrypt hash
+│   ├── security.py          # JWT sign/verify, bcrypt hash/verify
 │   └── dependencies.py      # get_current_user, require_role
 ├── models/
 │   └── kubereats.py         # UserInfo, RefreshToken
@@ -26,75 +28,41 @@ app/
 ├── services/
 │   └── auth_service.py      # Register, login, refresh logic
 └── routes/
-    └── auth_route.py        # API endpoints
+    └── auth_route.py        # Auth API endpoints
 ```
 
 ## API Endpoints
 
-| Method | Path              | Description              | Auth Required |
-|--------|-------------------|--------------------------|---------------|
-| POST   | `/auth/register`  | Register a new user      | No            |
-| POST   | `/auth/login`     | Login, returns JWT tokens| No            |
-| POST   | `/auth/refresh`   | Refresh access token     | No            |
-| GET    | `/auth/me`        | Get current user info    | Yes           |
+| Method | Path              | Description        | Auth Required |
+|--------|-------------------|--------------------|---------------|
+| POST   | `/auth/register`  | 註冊新使用者        | No            |
+| POST   | `/auth/login`     | 登入，取得 JWT token | No            |
+| POST   | `/auth/refresh`   | 刷新 access token   | No            |
+| GET    | `/auth/me`        | 取得目前使用者資訊    | Yes           |
 
 ## User Roles
 
-- `employee` - Regular employee
-- `merchant` - Restaurant merchant
-- `committee` - Welfare committee member
+| 角色 | 說明 |
+|------|------|
+| `employee` | 一般員工（訂餐） |
+| `merchant` | 商家（管理菜單） |
+| `committee` | 福委會（審核商家） |
 
-## Setup
+## Architecture
 
-### 1. Prerequisites
-
-- Python 3.12+
-- PostgreSQL
-- [uv](https://docs.astral.sh/uv/)
-
-### 2. Install Dependencies
-
-```bash
-pip install uv
-uv sync
-```
-
-### 3. Configure Environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your database connection:
+此服務是 KuberEats 微服務架構的一部分：
 
 ```
-DATABASE_URL=postgresql://<user>:<password>@localhost:<port>/<dbname>
-JWT_SECRET_KEY=your-secret-key
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
+Frontend (nginx) ─┬→ auth-service        /auth/*              ← 本服務
+                  ├→ merchant-service    /merchants/apply, /me, /menu
+                  ├→ committee-service   /committee/*
+                  └→ order-service       /merchants (瀏覽), /orders/*
+                          │
+                    共用 PostgreSQL
 ```
 
-### 4. Start PostgreSQL (Docker)
-
-```bash
-docker run -d --name kubereats-pg \
-  -e POSTGRES_USER=orderdev \
-  -e POSTGRES_PASSWORD=orderdev \
-  -e POSTGRES_DB=order_system \
-  -p 5432:5432 \
-  postgres:16-alpine
-```
-
-### 5. Run Server
-
-```bash
-uv run uvicorn app.main:app --reload
-```
-
-### 6. Test
-
-Open http://localhost:8000/docs for Swagger UI.
+- **JWT**: 本服務負責發 token，其他服務使用同一個 `JWT_SECRET_KEY` 驗證 token
+- **DB**: 共用資料庫，本服務管理 `user_info` 和 `refresh_tokens` 表
 
 ## Auth Flow
 
@@ -110,4 +78,62 @@ Protected API: Header → Authorization: Bearer <access_token>
 
 Token Refresh: POST /auth/refresh {refreshToken}
     → validate refresh_token → issue new token pair → revoke old refresh_token
+```
+
+## Setup
+
+### Prerequisites
+
+- Python 3.12+
+- PostgreSQL
+- [uv](https://docs.astral.sh/uv/)
+
+### Install & Run
+
+```bash
+pip install uv
+uv sync
+uv run uvicorn app.main:app --reload
+```
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL 連線字串 | `postgresql://orderdev:orderdev@localhost:5432/order_system` |
+| `JWT_SECRET_KEY` | JWT 密鑰（所有服務須一致） | `your-secret-key` |
+| `JWT_ALGORITHM` | JWT 演算法 | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token 過期時間（分鐘） | `30` |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token 過期時間（天） | `7` |
+
+### Docker
+
+```bash
+docker-compose up auth-service
+```
+
+## Response Example
+
+### POST /auth/login
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+  "tokenType": "bearer"
+}
+```
+
+### GET /auth/me
+
+```json
+{
+  "id": 1,
+  "username": "john",
+  "email": null,
+  "role": "employee",
+  "isActive": true,
+  "createdAt": "2026-05-14T10:00:00Z",
+  "updatedAt": "2026-05-14T10:00:00Z"
+}
 ```
