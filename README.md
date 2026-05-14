@@ -1,10 +1,12 @@
-# KuberEats Backend - Committee Management Module
+# KuberEats Committee Service
+
+福委會審核服務 — 負責審核商家的入駐申請（核准 / 駁回）。
 
 ## Tech Stack
 
 - **Framework**: FastAPI
 - **Database**: PostgreSQL + SQLAlchemy
-- **Auth**: JWT (PyJWT) + bcrypt
+- **Auth**: JWT (PyJWT) — 僅驗證 token，不發 token
 - **Package Manager**: uv
 - **Python**: 3.12
 
@@ -12,132 +14,118 @@
 
 ```
 app/
-├── main.py                      # FastAPI entry point
+├── main.py                      # FastAPI entry point (committee_router only)
 ├── database.py                  # SQLAlchemy engine & session
 ├── core/
-│   ├── security.py              # JWT sign/verify, bcrypt hash
+│   ├── security.py              # JWT decode (verify only, no token creation)
 │   └── dependencies.py          # get_current_user, require_role
 ├── models/
-│   └── kubereats.py             # UserInfo, RefreshToken, MerchantInfo, Menu, Order, OrderItem
+│   └── kubereats.py             # UserInfo, MerchantInfo
 ├── schemas/
-│   ├── auth.py                  # Auth request/response schemas
-│   ├── merchant.py              # Merchant & menu schemas
-│   └── committee.py             # Committee audit schemas
+│   └── committee.py             # MerchantReviewResponse, AuditResultResponse
 ├── repo/
-│   ├── user_repo.py             # User & token CRUD
-│   ├── merchant_repo.py         # Merchant, menu CRUD & order summary
 │   └── committee_repo.py        # Merchant audit queries & status update
 ├── services/
-│   ├── auth_service.py          # Register, login, refresh logic
-│   ├── merchant_service.py      # Apply, menu CRUD, order summary
-│   └── committee_service.py     # Merchant audit approve/reject logic
+│   └── committee_service.py     # Approve / reject logic
 └── routes/
-    ├── auth_route.py            # Auth API endpoints
-    ├── merchant_route.py        # Merchant API endpoints
     └── committee_route.py       # Committee API endpoints
 ```
 
 ## API Endpoints
 
-### Auth
-
-| Method | Path              | Description              | Auth Required |
-|--------|-------------------|--------------------------|---------------|
-| POST   | `/auth/register`  | Register a new user      | No            |
-| POST   | `/auth/login`     | Login, returns JWT tokens| No            |
-| POST   | `/auth/refresh`   | Refresh access token     | No            |
-| GET    | `/auth/me`        | Get current user info    | Yes           |
-
-### Merchant
-
-| Method | Path                     | Description                | Auth           |
-|--------|--------------------------|----------------------------|----------------|
-| POST   | `/merchants/apply`       | Apply to join platform     | merchant role  |
-| GET    | `/merchants/me`          | Get own merchant info      | merchant role  |
-| PUT    | `/merchants/me`          | Update merchant info       | merchant role  |
-| POST   | `/merchants/menu`        | Add menu item              | merchant role (approved) |
-| GET    | `/merchants/menu`        | List own menu items        | merchant role  |
-| PUT    | `/merchants/menu/{id}`   | Update menu item           | merchant role (approved) |
-| DELETE | `/merchants/menu/{id}`   | Delete menu item           | merchant role (approved) |
-| GET    | `/merchants/orders/today`| Today's order summary      | merchant role (approved) |
-
-### Committee
-
-| Method | Path                                    | Description              | Auth            |
-|--------|-----------------------------------------|--------------------------|-----------------|
-| GET    | `/committee/merchants/pending`          | List pending merchants   | committee role  |
-| GET    | `/committee/merchants`                  | List all merchants       | committee role  |
-| PATCH  | `/committee/merchants/{id}/approve`     | Approve a merchant       | committee role  |
-| PATCH  | `/committee/merchants/{id}/reject`      | Reject a merchant        | committee role  |
+| Method | Path                                    | Description        | Auth           |
+|--------|-----------------------------------------|--------------------|----------------|
+| GET    | `/committee/merchants/pending`          | 列出待審核商家       | committee role |
+| GET    | `/committee/merchants`                  | 列出所有商家         | committee role |
+| PATCH  | `/committee/merchants/{id}/approve`     | 核准商家             | committee role |
+| PATCH  | `/committee/merchants/{id}/reject`      | 駁回商家             | committee role |
 
 ## Audit Status
 
-- `0` - Pending (waiting for committee approval)
-- `1` - Approved (merchant can manage menu and view orders)
-- `2` - Rejected
+| 狀態碼 | 說明 |
+|--------|------|
+| `0`    | 待審核 (Pending) |
+| `1`    | 已核准 (Approved) |
+| `2`    | 已駁回 (Rejected) |
 
-Only pending merchants (`audit_status = 0`) can be reviewed. Already reviewed merchants return 400 error.
+僅待審核 (`audit_status = 0`) 的商家可以被審核，已審核的商家會回傳 400 錯誤。
+
+## Architecture
+
+此服務是 KuberEats 微服務架構的一部分：
+
+```
+Frontend (nginx) ─┬→ auth-service        /auth/*
+                  ├→ merchant-service    /merchants/apply, /me, /menu
+                  ├→ committee-service   /committee/*        ← 本服務
+                  └→ order-service       /merchants (瀏覽), /orders/*
+                          │
+                    共用 PostgreSQL
+```
+
+- **JWT**: auth-service 負責發 token，本服務僅驗證 token（共用同一個 `JWT_SECRET_KEY`）
+- **DB**: 共用資料庫，本服務只讀寫 `merchant_info` 的 `audit_status` 欄位
 
 ## Setup
 
-### 1. Prerequisites
+### Prerequisites
 
 - Python 3.12+
 - PostgreSQL
 - [uv](https://docs.astral.sh/uv/)
 
-### 2. Install Dependencies
+### Install & Run
 
 ```bash
 pip install uv
 uv sync
-```
-
-### 3. Configure Environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```
-DATABASE_URL=postgresql://<user>:<password>@localhost:<port>/<dbname>
-JWT_SECRET_KEY=your-secret-key
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
-```
-
-### 4. Start PostgreSQL (Docker)
-
-```bash
-docker run -d --name kubereats-pg \
-  -e POSTGRES_USER=orderdev \
-  -e POSTGRES_PASSWORD=orderdev \
-  -e POSTGRES_DB=order_system \
-  -p 5432:5432 \
-  postgres:16-alpine
-```
-
-### 5. Run Server
-
-```bash
 uv run uvicorn app.main:app --reload
 ```
 
-### 6. Test
+### Environment Variables
 
-Open http://localhost:8000/docs for Swagger UI.
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL 連線字串 | `postgresql://orderdev:orderdev@localhost:5432/order_system` |
+| `JWT_SECRET_KEY` | JWT 密鑰（需與 auth-service 一致） | `your-secret-key` |
+| `JWT_ALGORITHM` | JWT 演算法 | `HS256` |
 
-## Full Flow
+### Docker
 
+```bash
+docker-compose up committee-service
 ```
-1. Register merchant:  POST /auth/register {role: "merchant"}
-2. Register committee: POST /auth/register {role: "committee"}
-3. Merchant login → apply to platform: POST /merchants/apply
-4. Committee login → review: GET /committee/merchants/pending
-5. Committee approves: PATCH /committee/merchants/1/approve
-6. Merchant can now manage menu: POST /merchants/menu
-7. Merchant views daily orders: GET /merchants/orders/today
+
+## Response Example
+
+### GET /committee/merchants/pending
+
+```json
+[
+  {
+    "id": 1,
+    "userId": 3,
+    "merchantName": "好吃便當",
+    "campus": "竹科",
+    "category": "便當",
+    "minOrder": 100,
+    "maxOrderQuantity": 50,
+    "deliveryTime": "11:30-12:30",
+    "tags": ["便當", "台式"],
+    "auditStatus": 0,
+    "createdAt": "2026-05-14T10:00:00Z",
+    "updatedAt": "2026-05-14T10:00:00Z"
+  }
+]
+```
+
+### PATCH /committee/merchants/1/approve
+
+```json
+{
+  "id": 1,
+  "merchantName": "好吃便當",
+  "auditStatus": 1,
+  "message": "Merchant approved successfully"
+}
 ```
