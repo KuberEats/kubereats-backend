@@ -1,7 +1,7 @@
 from datetime import date
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.models.kubereats import Menu, MerchantInfo, Order, OrderItem
 
@@ -69,7 +69,7 @@ class MerchantRepository:
             .filter(
                 Menu.merchant_id == merchant_id,
                 func.date(Order.order_time) == target_date,
-                Order.order_status != 2,  # exclude cancelled
+                Order.order_status != 2,
             )
             .group_by(OrderItem.menu_id, Menu.item_name)
             .all()

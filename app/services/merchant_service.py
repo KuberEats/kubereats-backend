@@ -33,6 +33,7 @@ class MerchantService:
                 campus=data.campus,
                 category=data.category,
                 min_order=data.min_order,
+                max_order_quantity=data.max_order_quantity,
                 delivery_time=data.delivery_time,
                 tags=data.tags,
                 audit_status=0,
