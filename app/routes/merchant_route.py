@@ -7,7 +7,12 @@ from app.database import get_db
 from app.repo.menu_repo import MenuRepository
 from app.repo.merchant_repo import MerchantRepository
 from app.schemas.menu import MenuItemResponse
-from app.schemas.merchant import Campus, MerchantDetail, MerchantListItem, MerchantSortKey
+from app.schemas.merchant import (
+    Campus,
+    MerchantDetail,
+    MerchantListItem,
+    MerchantSortKey,
+)
 from app.services.menu_service import MenuService
 from app.services.merchant_service import MerchantService
 
@@ -32,7 +37,9 @@ def list_restaurants_for_order_page(
     sort_by: MerchantSortKey = Query(default="recommend"),
     service: MerchantService = Depends(get_merchant_service),
 ):
-    return service.list_restaurants_for_order_page(campus, date or Date.today(), sort_by)
+    return service.list_restaurants_for_order_page(
+        campus, date or Date.today(), sort_by
+    )
 
 
 @router.get("/{merchant_id}", response_model=MerchantDetail)

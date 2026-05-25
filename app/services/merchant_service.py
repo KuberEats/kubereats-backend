@@ -19,7 +19,9 @@ class MerchantService:
         merchants = self.merchant_repo.list_approved_by_campus(campus, target_date)
 
         if sort_by == "people":
-            return sorted(merchants, key=lambda merchant: merchant.order_count, reverse=True)
+            return sorted(
+                merchants, key=lambda merchant: merchant.order_count, reverse=True
+            )
 
         if sort_by == "popular":
             return sorted(merchants, key=lambda merchant: merchant.rating, reverse=True)

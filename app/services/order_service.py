@@ -33,7 +33,7 @@ class OrderService:
         menus = self._load_menus(menu_quantity_map)
         total_amount = self._calculate_total_amount(menu_quantity_map, menus)
         self._validate_merchant_min_orders(menu_quantity_map, menus)
-        
+
         target_date = date.today()
 
         try:
@@ -65,7 +65,9 @@ class OrderService:
             ]
             self.order_repo.create_order_items(order_items)
 
-            finance_records = self._build_finance_records(order.id, menu_quantity_map, menus)
+            finance_records = self._build_finance_records(
+                order.id, menu_quantity_map, menus
+            )
             self.order_repo.create_finance_records(finance_records)
 
             self.order_repo.commit()
@@ -169,7 +171,9 @@ class OrderService:
 
         for merchant_id, merchant_total in merchant_totals.items():
             merchant = next(
-                menu.merchant for menu in menus.values() if menu.merchant_id == merchant_id
+                menu.merchant
+                for menu in menus.values()
+                if menu.merchant_id == merchant_id
             )
 
             if merchant_total < merchant.min_order:

@@ -20,6 +20,9 @@ def clear_all_data(db):
         text(
             """
             TRUNCATE TABLE
+                refresh_tokens,
+                user_tags,
+                tags,
                 finance,
                 order_items,
                 orders,
@@ -42,61 +45,134 @@ def seed():
     try:
         clear_all_data(db)
 
+        admin_user = UserInfo(
+            username="admin",
+            hashed_password="fake_hashed_password",
+            role="admin",
+            history_records="Initial admin user",
+        )
+
+        staff_user = UserInfo(
+            username="staff01",
+            hashed_password="fake_hashed_password",
+            role="staff",
+            history_records="First staff user",
+        )
+
+        merchant_user_1 = UserInfo(
+            username="merchant01",
+            hashed_password="fake_hashed_password",
+            role="merchant",
+            history_records="阿明便當 owner",
+        )
+
+        merchant_user_2 = UserInfo(
+            username="merchant02",
+            hashed_password="fake_hashed_password",
+            role="merchant",
+            history_records="小森咖哩 owner",
+        )
+
+        merchant_user_3 = UserInfo(
+            username="merchant03",
+            hashed_password="fake_hashed_password",
+            role="merchant",
+            history_records="清爽蔬食盒 owner",
+        )
+
+        merchant_user_4 = UserInfo(
+            username="merchant04",
+            hashed_password="fake_hashed_password",
+            role="merchant",
+            history_records="南科牛肉麵 owner",
+        )
+
+        merchant_user_5 = UserInfo(
+            username="merchant05",
+            hashed_password="fake_hashed_password",
+            role="merchant",
+            history_records="中科港式燒臘 owner",
+        )
+
+        users = [
+            admin_user,
+            staff_user,
+            merchant_user_1,
+            merchant_user_2,
+            merchant_user_3,
+            merchant_user_4,
+            merchant_user_5,
+        ]
+        db.add_all(users)
+        db.commit()
+        for user in users:
+            db.refresh(user)
+
         merchant_1 = MerchantInfo(
+            user_id=merchant_user_1.id,
             merchant_name="阿明便當",
             campus="竹科",
             category="台式便當",
             rating=Decimal("4.8"),
             order_count=126,
             min_order=Decimal("80.00"),
+            max_order_quantity=50,
             delivery_time="25-35 分鐘",
             tags=["熱賣", "雞腿飯", "可團訂"],
             audit_status=1,
         )
 
         merchant_2 = MerchantInfo(
+            user_id=merchant_user_2.id,
             merchant_name="小森咖哩",
             campus="竹科",
             category="日式咖哩",
             rating=Decimal("4.6"),
             order_count=92,
             min_order=Decimal("120.00"),
+            max_order_quantity=80,
             delivery_time="30-40 分鐘",
             tags=["人氣", "咖哩飯", "今日可訂"],
             audit_status=1,
         )
 
         merchant_3 = MerchantInfo(
+            user_id=merchant_user_3.id,
             merchant_name="清爽蔬食盒",
             campus="竹科",
             category="健康餐盒",
             rating=Decimal("4.7"),
             order_count=76,
             min_order=Decimal("100.00"),
+            max_order_quantity=35,
             delivery_time="20-30 分鐘",
             tags=["低卡", "蔬食", "午餐推薦"],
             audit_status=1,
         )
 
         merchant_4 = MerchantInfo(
+            user_id=merchant_user_4.id,
             merchant_name="南科牛肉麵",
             campus="南科",
             category="麵食",
             rating=Decimal("4.5"),
             order_count=88,
             min_order=Decimal("90.00"),
+            max_order_quantity=45,
             delivery_time="30-45 分鐘",
             tags=["牛肉麵", "湯麵", "多人訂購"],
             audit_status=1,
         )
 
         merchant_5 = MerchantInfo(
+            user_id=merchant_user_5.id,
             merchant_name="中科港式燒臘",
             campus="中科",
             category="港式",
             rating=Decimal("4.4"),
             order_count=104,
             min_order=Decimal("95.00"),
+            max_order_quantity=60,
             delivery_time="25-35 分鐘",
             tags=["燒臘", "三寶飯", "熱門"],
             audit_status=1,
@@ -203,33 +279,14 @@ def seed():
         db.add_all(capacities)
         db.commit()
 
-        user_1 = UserInfo(
-            username="admin",
-            hashed_password="fake_hashed_password",
-            role="admin",
-            history_records="Initial admin user",
-        )
-
-        user_2 = UserInfo(
-            username="staff01",
-            hashed_password="fake_hashed_password",
-            role="staff",
-            history_records="First staff user",
-        )
-
-        db.add_all([user_1, user_2])
-        db.commit()
-        db.refresh(user_1)
-        db.refresh(user_2)
-
         order_1 = Order(
-            user_id=user_1.id,
+            user_id=admin_user.id,
             total_amount=Decimal("120.00"),
             order_status=1,
         )
 
         order_2 = Order(
-            user_id=user_2.id,
+            user_id=staff_user.id,
             total_amount=Decimal("150.00"),
             order_status=0,
         )

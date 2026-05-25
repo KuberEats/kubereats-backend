@@ -1,4 +1,3 @@
-from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload
@@ -50,7 +49,7 @@ class OrderRepository:
             .order_by(Order.order_time.desc())
             .all()
         )
-        
+
     def ensure_menu_daily_capacities(self, menus, target_date):
         rows = [
             {
@@ -80,15 +79,12 @@ class OrderRepository:
                 MenuDailyCapacity.target_date == target_date,
                 MenuDailyCapacity.remaining_quantity >= quantity,
             )
-            .values(
-                remaining_quantity=MenuDailyCapacity.remaining_quantity - quantity
-            )
+            .values(remaining_quantity=MenuDailyCapacity.remaining_quantity - quantity)
         )
 
         result = self.db.execute(statement)
         self.db.flush()
         return result.rowcount == 1
-
 
     def commit(self):
         self.db.commit()
