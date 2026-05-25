@@ -11,6 +11,35 @@ export default function setup() {
     return
   }
 
+  if (process.env.KUBEREATS_DB_RESET_MODE === 'local') {
+    resetWithLocalPython()
+    return
+  }
+
+  resetWithDockerCompose()
+}
+
+function resetWithLocalPython() {
+  try {
+    execFileSync('uv', ['run', 'python', 'create_dummy_data.py'], {
+      cwd: backendRoot,
+      stdio: 'pipe',
+      env: process.env,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+
+    throw new Error(
+      [
+        'Failed to reset backend test data with local Python.',
+        'Make sure PostgreSQL is running and DATABASE_URL is set.',
+        `Original error: ${message}`,
+      ].join('\n'),
+    )
+  }
+}
+
+function resetWithDockerCompose() {
   try {
     execFileSync(
       'docker',
