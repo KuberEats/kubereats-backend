@@ -157,6 +157,37 @@ This starts:
 - backend on http://localhost:8000
 - PostgreSQL on localhost:5432
 
+  ```bash
+  # go to root
+
+  docker compose down -v # this will reset db data too
+  docker compose up -d postgres backend
+  ```
+
+## Run Test
+
+in root:
+
+```bash
+docker compose down -v
+docker compose up -d postgres backend
+```
+
+in backend/ :
+
+```
+npm test # which will run docker compose exec -T backend uv run python create_dummy_data.py
+
+```
+
+npm test
+→ vitest run
+→ 讀 vitest.config.ts
+→ 發現 globalSetup
+→ 執行 test/global-setup.ts
+→ docker compose exec backend uv run python create_dummy_data.py
+→ 開始跑 *.test.ts
+
 ## Database Models
 
 The current SQLAlchemy models are defined in:
@@ -167,15 +198,15 @@ app/models/kubereats.py
 
 Current tables:
 
-| Table             | Purpose                                    |
-| ----------------- | ------------------------------------------ |
-| `merchant_info` | Merchant profile and audit status          |
-| `menu`          | Menu items sold by merchants               |
-| `menu_daily_capacity` | Per-menu daily max and remaining quantity |
-| `user_info`     | Users, staff, admins, and merchants        |
-| `orders`        | User orders                                |
-| `order_items`   | Menu items included in each order          |
-| `finance`       | Merchant settlement and order finance data |
+| Table                   | Purpose                                    |
+| ----------------------- | ------------------------------------------ |
+| `merchant_info`       | Merchant profile and audit status          |
+| `menu`                | Menu items sold by merchants               |
+| `menu_daily_capacity` | Per-menu daily max and remaining quantity  |
+| `user_info`           | Users, staff, admins, and merchants        |
+| `orders`              | User orders                                |
+| `order_items`         | Menu items included in each order          |
+| `finance`             | Merchant settlement and order finance data |
 
 During development, tables are created automatically in `app/main.py`:
 
