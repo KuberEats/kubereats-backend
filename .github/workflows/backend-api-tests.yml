@@ -66,7 +66,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install backend test dependencies
-        run: npm ci
+        run: npm ci --omit=optional
 
       - name: Run backend API tests
         run: npm test
