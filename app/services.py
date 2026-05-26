@@ -1,0 +1,108 @@
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from . import models, schemas
+from decimal import Decimal
+from datetime import datetime
+
+class MerchantFinanceService:
+    @staticmethod
+    def get_income_status(db: Session, merchant_id: int):
+        total = db.query(func.sum(models.Finance.settlement_amount)).filter(
+            models.Finance.merchant_id == merchant_id
+        ).scalar() or Decimal("0")
+        
+        count = db.query(models.Finance).filter(
+            models.Finance.merchant_id == merchant_id
+        ).count()
+        
+        return {"total_income": total, "order_count": count}
+
+    @staticmethod
+    def get_payouts(db: Session, merchant_id: int):
+        records = db.query(models.Finance).filter(
+            models.Finance.merchant_id == merchant_id
+        ).all()
+        
+        results = []
+        for r in records:
+            status = "pending"
+            if r.report_data and isinstance(r.report_data, dict):
+                status = r.report_data.get("status", "pending")
+            
+            results.append({
+                "id": r.id,
+                "order_id": r.order_id,
+                "settlement_amount": r.settlement_amount,
+                "status": status
+            })
+        return results
+
+    @staticmethod
+    def get_monthly_total(db: Session, merchant_id: int):
+        now = datetime.now()
+        month_start = datetime(now.year, now.month, 1)
+        
+        total = db.query(func.sum(models.Finance.settlement_amount)).join(models.Order).filter(
+            models.Finance.merchant_id == merchant_id,
+            models.Order.order_time >= month_start
+        ).scalar() or Decimal("0")
+        
+        return {"monthly_total": total, "month": now.month, "year": now.year}
+
+class StaffFinanceService:
+    @staticmethod
+    def get_expenses(db: Session, user_id: int):
+        total = db.query(func.sum(models.Order.total_amount)).filter(
+            models.Order.user_id == user_id,
+            models.Order.order_status == 1 # Finished
+        ).scalar() or Decimal("0")
+        
+        count = db.query(models.Order).filter(
+            models.Order.user_id == user_id,
+            models.Order.order_status == 1
+        ).count()
+        
+        return {"total_expense": total, "order_count": count}
+
+    @staticmethod
+    def get_salary_deductions(db: Session, user_id: int):
+        orders = db.query(models.Order).filter(
+            models.Order.user_id == user_id,
+            models.Order.order_status == 1
+        ).all()
+        
+        return orders
+
+class ReportService:
+    @staticmethod
+    def get_history(db: Session):
+        """讀取歷史記錄"""
+        return db.query(models.Finance).all()
+
+    @staticmethod
+    def trigger_report_generation(merchant_id: int):
+        """產生 PDF / 網頁報表 (透過 Celery)"""
+        from .tasks import generate_report_task
+        task = generate_report_task.delay(merchant_id)
+        return {"task_id": task.id, "status": "Report generation started"}
+
+    @staticmethod
+    def notify_merchant(merchant_id: int, report_url: str):
+        """通知商家報表結果 (Placeholder)"""
+        # Logic to send notification (email/push)
+        print(f"Notifying merchant {merchant_id} about report at {report_url}")
+        return True
+
+    @staticmethod
+    def save_monthly_summary(db: Session, merchant_id: int, report_data: dict, amount: Decimal):
+        """將月份資訊定期寫入"""
+        new_record = models.Finance(
+            merchant_id=merchant_id,
+            report_data=report_data,
+            settlement_amount=amount,
+            order_id=0 # Placeholder for summary records
+        )
+        db.add(new_record)
+        db.commit()
+        db.refresh(new_record)
+        return new_record
