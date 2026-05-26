@@ -1,0 +1,13 @@
+{
+  "name": "kubereats-backend-api-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "vitest": "^4.0.13"
+  }
+}
