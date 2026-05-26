@@ -48,17 +48,39 @@ def read_root():
 
 @app.post("/api/seed")
 def seed_data(db: Session = Depends(get_db)):
+    # Create a user for the merchant
+    merchant_user = db.query(UserInfo).filter(UserInfo.username == "merchant_user").first()
+    if not merchant_user:
+        merchant_user = UserInfo(
+            username="merchant_user", 
+            hashed_password="hashed_password", 
+            role="merchant"
+        )
+        db.add(merchant_user)
+        db.flush()
+
     # Create a merchant
     merchant = db.query(MerchantInfo).filter(MerchantInfo.merchant_name == "Kube Fried Chicken").first()
     if not merchant:
-        merchant = MerchantInfo(merchant_name="Kube Fried Chicken", audit_status=1)
+        merchant = MerchantInfo(
+            user_id=merchant_user.id,
+            merchant_name="Kube Fried Chicken", 
+            campus="Main Campus",
+            category="Fast Food",
+            delivery_time="20-30 min",
+            audit_status=1
+        )
         db.add(merchant)
         db.flush()
     
-    # Create a user
+    # Create a user (staff)
     user = db.query(UserInfo).filter(UserInfo.username == "staff_001").first()
     if not user:
-        user = UserInfo(username="staff_001", hashed_password="hashed_password", role="staff")
+        user = UserInfo(
+            username="staff_001", 
+            hashed_password="hashed_password", 
+            role="staff"
+        )
         db.add(user)
         db.flush()
     
@@ -69,7 +91,12 @@ def seed_data(db: Session = Depends(get_db)):
         db.flush()
         
         # Create finance record
-        finance = Finance(merchant_id=merchant.id, order_id=order.id, settlement_amount=decimal.Decimal("135.00"), report_data={"tax": "10%"})
+        finance = Finance(
+            merchant_id=merchant.id, 
+            order_id=order.id, 
+            settlement_amount=decimal.Decimal("135.00"), 
+            report_data={"tax": "10%"}
+        )
         db.add(finance)
     
     db.commit()
