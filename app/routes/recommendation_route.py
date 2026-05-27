@@ -6,7 +6,9 @@ from app.repo.recommendation_repo import RecommendationRepository
 from app.schemas.recommendation import (
     Campus,
     MenuRecommendation,
+    MenuRecommendationRequest,
     MerchantRecommendation,
+    RecommendationRequest,
 )
 from app.services.recommendation_service import RecommendationService
 
@@ -17,6 +19,14 @@ def get_recommendation_service(db: Session = Depends(get_db)):
     return RecommendationService(RecommendationRepository(db))
 
 
+@router.post("/merchants", response_model=list[MerchantRecommendation])
+def recommend_merchants_by_prompt(
+    request: RecommendationRequest,
+    service: RecommendationService = Depends(get_recommendation_service),
+):
+    return service.recommend_merchants_by_prompt(request)
+
+
 @router.get("/merchants", response_model=list[MerchantRecommendation])
 def recommend_merchants(
     user_id: int = Query(alias="userId"),
@@ -25,6 +35,14 @@ def recommend_merchants(
     service: RecommendationService = Depends(get_recommendation_service),
 ):
     return service.recommend_merchants(user_id=user_id, campus=campus, limit=limit)
+
+
+@router.post("/menus", response_model=list[MenuRecommendation])
+def recommend_menus_by_prompt(
+    request: MenuRecommendationRequest,
+    service: RecommendationService = Depends(get_recommendation_service),
+):
+    return service.recommend_menus_by_prompt(request)
 
 
 @router.get("/menus", response_model=list[MenuRecommendation])

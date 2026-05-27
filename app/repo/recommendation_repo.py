@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.kubereats import Menu, MerchantInfo, UserInfo
+from app.models.kubereats import Menu, MerchantInfo, Order, OrderItem, UserInfo
 
 
 class RecommendationRepository:
@@ -15,13 +15,34 @@ class RecommendationRepository:
             .first()
         )
 
-    def list_approved_merchants(self, campus: str | None = None):
-        query = self.db.query(MerchantInfo).filter(MerchantInfo.audit_status == 1)
+    def list_recent_orders_by_user(self, user_id: int, limit: int = 10):
+        return (
+            self.db.query(Order)
+            .options(
+                joinedload(Order.items)
+                .joinedload(OrderItem.menu)
+                .joinedload(Menu.merchant),
+            )
+            .filter(Order.user_id == user_id)
+            .order_by(Order.order_time.desc())
+            .limit(limit)
+            .all()
+        )
+
+    def list_candidate_merchants(self, campus: str | None = None):
+        query = (
+            self.db.query(MerchantInfo)
+            .options(joinedload(MerchantInfo.menus))
+            .filter(MerchantInfo.audit_status == 1)
+        )
 
         if campus:
             query = query.filter(MerchantInfo.campus == campus)
 
         return query.all()
+
+    def list_approved_merchants(self, campus: str | None = None):
+        return self.list_candidate_merchants(campus)
 
     def list_candidate_menus(
         self,
