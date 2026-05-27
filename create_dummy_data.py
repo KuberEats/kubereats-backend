@@ -23,6 +23,7 @@ def clear_all_data(db):
                 refresh_tokens,
                 user_tags,
                 tags,
+                outbox_events,
                 finance,
                 order_items,
                 orders,
@@ -38,6 +39,7 @@ def clear_all_data(db):
 
 
 def seed():
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
@@ -281,14 +283,20 @@ def seed():
 
         order_1 = Order(
             user_id=admin_user.id,
+            order_number="ORD-{}-000001".format(today.strftime("%Y%m%d")),
             total_amount=Decimal("120.00"),
             order_status=1,
+            service_date=today,
+            schedule_status="not_scheduled",
         )
 
         order_2 = Order(
             user_id=staff_user.id,
+            order_number="ORD-{}-000002".format(today.strftime("%Y%m%d")),
             total_amount=Decimal("150.00"),
             order_status=0,
+            service_date=today,
+            schedule_status="not_scheduled",
         )
 
         db.add_all([order_1, order_2])

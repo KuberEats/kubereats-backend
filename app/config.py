@@ -1,0 +1,29 @@
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    queue_backend: str = "fake"
+    rabbitmq_url: str = "amqp://guest:guest@rabbitmq:5672/"
+    dispatch_lead_minutes: int = 30
+    max_schedule_days: int = 30
+
+    gcp_project_id: str = ""
+    gcp_location: str = ""
+    gcp_cloud_tasks_queue: str = ""
+    gcp_task_handler_url: str = ""
+    gcp_task_service_account_email: str = ""
+
+    internal_task_auth_enabled: bool = False
+    internal_task_token: str = ""
+    internal_task_handler_url: str = (
+        "http://backend:8000/internal/tasks/orders/release"
+    )
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

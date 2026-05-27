@@ -140,14 +140,28 @@ class RefreshToken(TimestampMixin, Base):
 
 class Order(TimestampMixin, Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        UniqueConstraint("order_number", name="uq_orders_order_number"),
+        UniqueConstraint("user_id", "idempotency_key", name="uq_orders_user_id_idempotency_key"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("user_info.id"), nullable=False)
+    order_number = Column(String(32), nullable=True)
     total_amount = Column(Numeric(10, 2), nullable=False)
     order_status = Column(Integer, default=0, nullable=False)
     order_time = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    service_date = Column(Date, nullable=True)
+    scheduled_for = Column(DateTime(timezone=True), nullable=True)
+    dispatch_at = Column(DateTime(timezone=True), nullable=True)
+    schedule_status = Column(String(32), default="not_scheduled", nullable=False)
+    idempotency_key = Column(String(255), nullable=True)
+    idempotency_request_hash = Column(String(64), nullable=True)
+    released_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+    cancellation_reason = Column(Text, nullable=True)
 
     user = relationship("UserInfo", back_populates="orders")
     items = relationship(
@@ -187,3 +201,20 @@ class Finance(TimestampMixin, Base):
 
     merchant = relationship("MerchantInfo", back_populates="finances")
     order = relationship("Order", back_populates="finance_records")
+
+
+class OutboxEvent(Base):
+    __tablename__ = "outbox_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    aggregate_type = Column(String(64), nullable=False)
+    aggregate_id = Column(Integer, nullable=False)
+    event_type = Column(String(128), nullable=False)
+    payload_json = Column(JSON, nullable=False)
+    available_at = Column(DateTime(timezone=True), nullable=False)
+    published_at = Column(DateTime(timezone=True), nullable=True)
+    retry_count = Column(Integer, default=0, nullable=False)
+    last_error = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
