@@ -1,0 +1,221 @@
+name: Notification Service CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+      - "module/**"
+
+jobs:
+  lint-typecheck-unit-sqlite:
+    name: Lint, Compile, Unit, SQLite API Tests
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite:///./notification_test.db
+      REDIS_URL: redis://localhost:6379/0
+      EMAIL_PROVIDER: memory
+      INTERNAL_SERVICE_TOKENS: order-service:dev-order-token,finance-service:dev-finance-token,merchant-service:dev-merchant-token,committee-service:dev-committee-token,admin-service:dev-admin-token
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run SQLite migration
+        run: uv run python scripts/migrate.py
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Typecheck substitute
+        run: uv run python -m compileall app tests scripts
+
+      - name: Unit and fast API tests
+        run: >
+          uv run pytest
+          tests/test_templates.py
+          tests/test_notification_service.py
+          tests/test_retry_policy.py
+          tests/test_api.py
+
+  postgres-api-integration:
+    name: PostgreSQL API Integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: kubereats_notification
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d kubereats_notification"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://user:password@127.0.0.1:5432/kubereats_notification
+      REDIS_URL: redis://127.0.0.1:6379/0
+      EMAIL_PROVIDER: memory
+      INTERNAL_SERVICE_TOKENS: order-service:dev-order-token,finance-service:dev-finance-token,merchant-service:dev-merchant-token,committee-service:dev-committee-token,admin-service:dev-admin-token
+      LIVE_API_BASE_URL: http://127.0.0.1:8000
+      API_BASE_URL: http://127.0.0.1:8000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run PostgreSQL migration
+        run: uv run python scripts/migrate.py
+
+      - name: Start notification API
+        run: |
+          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
+          echo $! > api.pid
+          uv run python scripts/wait_for_api.py
+
+      - name: Run live API integration tests
+        run: uv run pytest tests/integration/test_live_api.py -q
+
+      - name: Debug logs on failure
+        if: failure()
+        run: |
+          echo "::group::notification-api log"
+          cat api.log || true
+          echo "::endgroup::"
+          echo "::group::docker containers"
+          docker ps -a || true
+          echo "::endgroup::"
+          echo "::group::docker logs"
+          for id in $(docker ps -aq); do docker logs "$id" || true; done
+          echo "::endgroup::"
+
+      - name: Cleanup API
+        if: always()
+        run: |
+          if [ -f api.pid ]; then kill "$(cat api.pid)" || true; fi
+
+  worker-mailhog-e2e:
+    name: Worker, Redis, MailHog E2E
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: kubereats_notification
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d kubereats_notification"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      mailhog:
+        image: mailhog/mailhog:v1.0.1
+        ports:
+          - 1025:1025
+          - 8025:8025
+    env:
+      DATABASE_URL: postgresql://user:password@127.0.0.1:5432/kubereats_notification
+      REDIS_URL: redis://127.0.0.1:6379/0
+      EMAIL_PROVIDER: local
+      SMTP_HOST: 127.0.0.1
+      SMTP_PORT: 1025
+      SMTP_FROM_EMAIL: noreply@kubereats.local
+      INTERNAL_SERVICE_TOKENS: order-service:dev-order-token,finance-service:dev-finance-token,merchant-service:dev-merchant-token,committee-service:dev-committee-token,admin-service:dev-admin-token
+      LIVE_API_BASE_URL: http://127.0.0.1:8000
+      API_BASE_URL: http://127.0.0.1:8000
+      MAILHOG_API_URL: http://127.0.0.1:8025
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run PostgreSQL migration
+        run: uv run python scripts/migrate.py
+
+      - name: Start notification API and worker
+        run: |
+          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 > api.log 2>&1 &
+          echo $! > api.pid
+          uv run celery -A app.worker.celery_app worker --loglevel=info > worker.log 2>&1 &
+          echo $! > worker.pid
+          uv run python scripts/wait_for_api.py
+
+      - name: Run worker MailHog E2E test
+        run: uv run pytest tests/integration/test_worker_mailhog_e2e.py -q
+
+      - name: Debug logs on failure
+        if: failure()
+        run: |
+          echo "::group::notification-api log"
+          cat api.log || true
+          echo "::endgroup::"
+          echo "::group::notification-worker log"
+          cat worker.log || true
+          echo "::endgroup::"
+          echo "::group::docker containers"
+          docker ps -a || true
+          echo "::endgroup::"
+          echo "::group::docker logs"
+          for id in $(docker ps -aq); do docker logs "$id" || true; done
+          echo "::endgroup::"
+
+      - name: Cleanup processes
+        if: always()
+        run: |
+          if [ -f api.pid ]; then kill "$(cat api.pid)" || true; fi
+          if [ -f worker.pid ]; then kill "$(cat worker.pid)" || true; fi
