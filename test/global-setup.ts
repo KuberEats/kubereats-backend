@@ -1,10 +1,13 @@
 import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
 const backendRoot = resolve(currentDir, '..')
-const composeFile = resolve(backendRoot, '..', 'docker-compose.yml')
+const localComposeFile = resolve(backendRoot, 'docker-compose.yml')
+const parentComposeFile = resolve(backendRoot, '..', 'docker-compose.yml')
+const composeFile = existsSync(localComposeFile) ? localComposeFile : parentComposeFile
 
 export default function setup() {
   if (process.env.KUBEREATS_SKIP_DB_RESET === '1') {
