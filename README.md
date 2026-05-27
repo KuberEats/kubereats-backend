@@ -47,13 +47,13 @@ HTTP request
 
 Layer responsibilities:
 
-| Layer        | Responsibility                                  |
-| ------------ | ----------------------------------------------- |
-| `routes/`    | Receive HTTP requests and return HTTP responses |
-| `services/`  | Handle recommendation logic                     |
-| `repo/`      | Query and mutate PostgreSQL data                |
-| `models/`    | Define SQLAlchemy database tables               |
-| `schemas/`   | Define Pydantic request and response shapes     |
+| Layer         | Responsibility                                  |
+| ------------- | ----------------------------------------------- |
+| `routes/`   | Receive HTTP requests and return HTTP responses |
+| `services/` | Handle recommendation logic                     |
+| `repo/`     | Query and mutate PostgreSQL data                |
+| `models/`   | Define SQLAlchemy database tables               |
+| `schemas/`  | Define Pydantic request and response shapes     |
 
 ## Prompt Recommendation Flow
 
@@ -87,8 +87,8 @@ Example request:
 
 The prompt is converted into three intent buckets:
 
-| Bucket   | Meaning                                         | Example                                      |
-| -------- | ----------------------------------------------- | -------------------------------------------- |
+| Bucket     | Meaning                                         | Example                                      |
+| ---------- | ----------------------------------------------- | -------------------------------------------- |
 | `must`   | Hard constraints. Results must satisfy these.   | campus, excluded terms, max budget           |
 | `avoid`  | Prefer to avoid, but may relax if too few items | recently ordered merchants, repeated choices |
 | `prefer` | Soft preferences used for ranking and reasons   | healthy, fast delivery, popular, familiar    |
@@ -113,14 +113,14 @@ For the example above, the interpreted intent is conceptually:
 
 Pipeline responsibilities:
 
-| Step | Component | Responsibility |
-| ---- | --------- | -------------- |
-| 1 | `PromptInterpreter` | Parse the prompt into `must`, `avoid`, and `prefer` intent. |
-| 2 | `UserContextRetriever` | Retrieve recent orders, favorite merchants/categories, user tags, and average spend from PostgreSQL. |
-| 3 | `SqlSearchProvider` | Find approved candidate merchants or menus with SQL-backed data and keyword matching. |
-| 4 | `ConstraintFilter` | Apply hard constraints first, then avoid constraints when enough candidates remain. |
-| 5 | `HeuristicRerankerProvider` | Score candidates with prompt matches, rating, popularity, budget fit, delivery fit, history, and novelty. |
-| 6 | `TemplateReasonGenerator` | Produce user-facing reasons and machine-readable signals. |
+| Step | Component                     | Responsibility                                                                                            |
+| ---- | ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1    | `PromptInterpreter`         | Parse the prompt into `must`, `avoid`, and `prefer` intent.                                         |
+| 2    | `UserContextRetriever`      | Retrieve recent orders, favorite merchants/categories, user tags, and average spend from PostgreSQL.      |
+| 3    | `SqlSearchProvider`         | Find approved candidate merchants or menus with SQL-backed data and keyword matching.                     |
+| 4    | `ConstraintFilter`          | Apply hard constraints first, then avoid constraints when enough candidates remain.                       |
+| 5    | `HeuristicRerankerProvider` | Score candidates with prompt matches, rating, popularity, budget fit, delivery fit, history, and novelty. |
+| 6    | `TemplateReasonGenerator`   | Produce user-facing reasons and machine-readable signals.                                                 |
 
 The history data is contextual: it can add score when the user asks for familiar
 food, but it can also subtract score or filter results when the user asks for
@@ -128,11 +128,12 @@ something recently not eaten.
 
 Cloud-ready replacement points:
 
-| Local demo component | Future cloud implementation |
-| -------------------- | --------------------------- |
-| `SqlSearchProvider` | PostgreSQL full-text search, pgvector, Elasticsearch, or Vertex AI Search |
-| `HeuristicRerankerProvider` | HTTP reranker service on GKE, Cloud Run GPU, or Vertex AI endpoint |
-| `TemplateReasonGenerator` | Self-hosted LLM endpoint or managed model endpoint |
+| Local demo component          | Future cloud implementation                                               |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| `PromptInterpreter`         | LLM interprete to json format                                             |
+| `SqlSearchProvider`         | PostgreSQL full-text search, pgvector, Elasticsearch, or Vertex AI Search |
+| `HeuristicRerankerProvider` | HTTP reranker service on GKE, Cloud Run GPU, or Vertex AI endpoint        |
+| `TemplateReasonGenerator`   | Self-hosted LLM endpoint or managed model endpoint                        |
 
 ## Recommendation APIs
 
@@ -248,8 +249,8 @@ app/models/kubereats.py
 
 Current tables:
 
-| Table                 | Purpose                                   |
-| --------------------- | ----------------------------------------- |
+| Table                   | Purpose                                   |
+| ----------------------- | ----------------------------------------- |
 | `merchant_info`       | Merchant profile and audit status         |
 | `menu`                | Menu items sold by merchants              |
 | `menu_daily_capacity` | Per-menu daily max and remaining quantity |
