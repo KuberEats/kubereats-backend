@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.repo.menu_repo import MenuRepository
 from app.repo.order_repo import OrderRepository
 from app.schemas.order import (
+    OrderCancelRequest,
     OrderCreate,
     OrderHistorySortKey,
     OrderResponse,
@@ -25,9 +26,10 @@ def get_order_service(db: Session = Depends(get_db)):
 @router.post("", response_model=OrderResponse, status_code=201)
 def create_order(
     order_data: OrderCreate,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     service: OrderService = Depends(get_order_service),
 ):
-    return service.create_order(order_data)
+    return service.create_order(order_data, idempotency_key=idempotency_key)
 
 
 @router.get("", response_model=list[OrderResponse])
@@ -54,3 +56,16 @@ def update_order_status(
     service: OrderService = Depends(get_order_service),
 ):
     return service.update_order_status(order_id, status_data.order_status)
+
+
+@router.post("/{order_id}/cancel", response_model=OrderResponse)
+def cancel_order(
+    order_id: int,
+    cancel_data: OrderCancelRequest | None = None,
+    service: OrderService = Depends(get_order_service),
+):
+    return service.cancel_order(
+        order_id,
+        reason=cancel_data.reason if cancel_data else None,
+    )
+

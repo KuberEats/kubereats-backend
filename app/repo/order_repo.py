@@ -1,8 +1,18 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.kubereats import Finance, MenuDailyCapacity, Order, OrderItem, UserInfo
+from app.models.kubereats import (
+    Finance,
+    MenuDailyCapacity,
+    Order,
+    OrderItem,
+    OutboxEvent,
+    UserInfo,
+)
 
 
 class OrderRepository:
@@ -27,6 +37,16 @@ class OrderRepository:
         self.db.flush()
         return finance_records
 
+    def get_by_user_id_and_idempotency_key(self, user_id: int, idempotency_key: str):
+        return (
+            self.db.query(Order)
+            .filter(
+                Order.user_id == user_id,
+                Order.idempotency_key == idempotency_key,
+            )
+            .first()
+        )
+
     def get_by_id(self, order_id: int):
         return (
             self.db.query(Order)
@@ -35,6 +55,14 @@ class OrderRepository:
                 joinedload(Order.finance_records).joinedload(Finance.merchant),
             )
             .filter(Order.id == order_id)
+            .first()
+        )
+
+    def get_by_id_for_update(self, order_id: int):
+        return (
+            self.db.query(Order)
+            .filter(Order.id == order_id)
+            .with_for_update()
             .first()
         )
 
@@ -86,6 +114,51 @@ class OrderRepository:
         self.db.flush()
         return result.rowcount == 1
 
+    def restore_menu_daily_capacity(self, menu_id: int, target_date, quantity: int):
+        statement = (
+            update(MenuDailyCapacity)
+            .where(
+                MenuDailyCapacity.menu_id == menu_id,
+                MenuDailyCapacity.target_date == target_date,
+            )
+            .values(remaining_quantity=MenuDailyCapacity.remaining_quantity + quantity)
+        )
+
+        result = self.db.execute(statement)
+        self.db.flush()
+        return result.rowcount == 1
+
+    def create_outbox_event(self, event: OutboxEvent):
+        self.db.add(event)
+        self.db.flush()
+        return event
+
+    def list_unpublished_outbox_events(self, limit: int = 100):
+        now = datetime.now(timezone.utc)
+        return (
+            self.db.query(OutboxEvent)
+            .filter(
+                OutboxEvent.published_at.is_(None),
+                OutboxEvent.available_at <= now,
+            )
+            .order_by(OutboxEvent.available_at.asc(), OutboxEvent.id.asc())
+            .limit(limit)
+            .all()
+        )
+
+    def mark_outbox_event_published(self, event: OutboxEvent):
+        event.published_at = datetime.now(timezone.utc)
+        event.last_error = None
+        self.db.flush()
+
+    def mark_outbox_event_failed(self, event: OutboxEvent, error: str):
+        event.retry_count += 1
+        event.last_error = error[:1000]
+        self.db.flush()
+
+    def flush(self):
+        self.db.flush()
+
     def commit(self):
         self.db.commit()
 
@@ -94,3 +167,6 @@ class OrderRepository:
 
     def refresh(self, instance):
         self.db.refresh(instance)
+
+    def is_integrity_error(self, error: Exception):
+        return isinstance(error, IntegrityError)
