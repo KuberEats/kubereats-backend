@@ -93,3 +93,11 @@ def get_today_orders(
     service: MerchantService = Depends(get_merchant_service),
 ):
     return service.get_today_order_summary(current_user.id)
+
+
+@router.post("/orders/confirm-today")
+def confirm_today_orders(
+    current_user: UserInfo = Depends(merchant_role),
+    service: MerchantService = Depends(get_merchant_service),
+):
+    return service.confirm_today_orders(current_user.id)

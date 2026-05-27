@@ -76,6 +76,20 @@ class MerchantRepository:
         )
         return results
 
+    def get_today_pending_orders(self, merchant_id: int, target_date: date) -> list[Order]:
+        return (
+            self.db.query(Order)
+            .join(OrderItem, Order.id == OrderItem.order_id)
+            .join(Menu, OrderItem.menu_id == Menu.id)
+            .filter(
+                Menu.merchant_id == merchant_id,
+                func.date(Order.order_time) == target_date,
+                Order.order_status == 0,
+            )
+            .distinct()
+            .all()
+        )
+
     def commit(self):
         self.db.commit()
 

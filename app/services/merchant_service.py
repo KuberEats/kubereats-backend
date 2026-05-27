@@ -126,6 +126,15 @@ class MerchantService:
             "items": items,
         }
 
+    def confirm_today_orders(self, user_id: int) -> dict:
+        merchant = self._get_approved_merchant(user_id)
+        today = date.today()
+        orders = self.merchant_repo.get_today_pending_orders(merchant.id, today)
+        for order in orders:
+            order.order_status = 1
+        self.merchant_repo.commit()
+        return {"confirmed_count": len(orders)}
+
     # ── Helpers ──
 
     def _get_approved_merchant(self, user_id: int) -> MerchantInfo:
