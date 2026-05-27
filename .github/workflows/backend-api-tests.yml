@@ -46,6 +46,7 @@ jobs:
       - name: Start backend
         run: |
           uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
+          echo $! > backend.pid
 
       - name: Wait for backend health
         run: |
@@ -70,3 +71,11 @@ jobs:
 
       - name: Run backend API tests
         run: npm test
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then
+            kill "$(cat backend.pid)" || true
+          fi
+          pkill -f "uvicorn app.main:app" || true
