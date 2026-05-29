@@ -42,3 +42,8 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+@app.get("/health-check")
+def health_check_alias():
+    return health_check()

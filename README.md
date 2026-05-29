@@ -320,7 +320,22 @@ uv run python create_dummy_data.py
 Expected output:
 
 ```txt
-Dummy data reset and created successfully.
+Dummy data reset and created successfully: 14 merchants, 38 menus, 9 staff history orders.
+```
+
+The seed data includes 12 approved `竹科` merchants across curry, bento,
+healthy meals, noodles, roast meats, Thai, Korean, Italian, sushi, spicy food,
+breakfast, and Mexican categories. Use `userId=2` (`staff01`) when testing
+recommendations with history: this user has recent repeated orders from bento,
+curry, healthy meals, roast meats, noodles, Thai, and Korean merchants. Useful
+prompt examples:
+
+```txt
+我想要吃咖哩
+我想吃清爽一點，不要太油
+今天想換口味，最近沒吃過的
+我想吃不一樣的，不要最近吃過的
+想吃辣一點但不要牛肉
 ```
 
 ## Useful Commands
