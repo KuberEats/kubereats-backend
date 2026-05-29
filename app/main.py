@@ -35,6 +35,15 @@ def root():
     return {"message": "Kubereats backend is running"}
 
 
+def get_health_status():
+    return {"status": "ok"}
+
+
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return get_health_status()
+
+
+@app.get("/health-check")
+def health_check_probe():
+    return get_health_status()

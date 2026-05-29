@@ -9,4 +9,11 @@ describe('health API', () => {
     expect(response.status).toBe(200)
     expect(response.body).toEqual({ status: 'ok' })
   })
+
+  it('returns ok from the health-check endpoint', async () => {
+    const response = await apiRequest<{ status: string }>('/health-check')
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({ status: 'ok' })
+  })
 })

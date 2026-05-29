@@ -39,6 +39,7 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
+      - /app/.venv
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,6 +58,7 @@ services:
     command: ["uv", "run", "python", "-m", "app.commands.dispatch_outbox"]
     volumes:
       - .:/app
+      - /app/.venv
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,6 +78,7 @@ services:
     command: ["uv", "run", "python", "-m", "app.commands.consume_order_release"]
     volumes:
       - .:/app
+      - /app/.venv
     depends_on:
       backend:
         condition: service_started
