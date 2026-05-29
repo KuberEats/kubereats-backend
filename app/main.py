@@ -33,3 +33,7 @@ app.include_router(finance.router, prefix="/api/finance", tags=["finance"])
 @app.get("/")
 def read_root():
     return {"message": "Welcome to KubeEats Finance Microservice"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
