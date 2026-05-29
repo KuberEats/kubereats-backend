@@ -1,11 +1,10 @@
 import jwt
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
+from app.core.config import get_settings
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-key")
-ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+_settings = get_settings()
+SECRET_KEY = _settings.jwt_secret_key
+ALGORITHM = _settings.jwt_algorithm
 
 
 def decode_token(token: str) -> dict | None:
