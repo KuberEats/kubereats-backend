@@ -1,8 +1,7 @@
 import os
 
-os.environ.setdefault(
-    "DATABASE_URL", "postgresql://postgres:test@localhost:5432/testdb"
-)
+os.environ.setdefault("DATABASE_URL", "postgresql://postgres:test@localhost:5432/testdb")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key")
 
 import pytest
 from sqlalchemy import create_engine, event
