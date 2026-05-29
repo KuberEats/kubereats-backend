@@ -1,6 +1,12 @@
 from sqlalchemy import (
-    Boolean, Column, Date, DateTime, ForeignKey, Integer, JSON,
-    Numeric, String, UniqueConstraint,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    JSON,
+    Numeric,
+    String,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -9,7 +15,9 @@ from app.database import Base
 
 
 class TimestampMixin:
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -74,7 +82,9 @@ class Order(TimestampMixin, Base):
     user_id = Column(Integer, ForeignKey("user_info.id"), nullable=False)
     total_amount = Column(Numeric(10, 2), nullable=False)
     order_status = Column(Integer, default=0, nullable=False)
-    order_time = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    order_time = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     items = relationship("OrderItem", back_populates="order")
 

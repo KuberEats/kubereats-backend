@@ -6,6 +6,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 # ── Merchant ──
 
+
 class MerchantApplyRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -77,6 +78,7 @@ class MerchantResponse(BaseModel):
 
 # ── Menu ──
 
+
 class MenuCreateRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -129,6 +131,7 @@ class MenuResponse(BaseModel):
 
 
 # ── Order Summary ──
+
 
 class OrderItemSummary(BaseModel):
     model_config = ConfigDict(populate_by_name=True)

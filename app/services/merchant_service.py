@@ -51,7 +51,9 @@ class MerchantService:
             )
         return merchant
 
-    def update_my_merchant(self, user_id: int, data: MerchantUpdateRequest) -> MerchantInfo:
+    def update_my_merchant(
+        self, user_id: int, data: MerchantUpdateRequest
+    ) -> MerchantInfo:
         merchant = self.get_my_merchant(user_id)
         update_data = data.model_dump(exclude_unset=True)
         if not update_data:
@@ -83,7 +85,9 @@ class MerchantService:
         merchant = self.get_my_merchant(user_id)
         return self.merchant_repo.list_menus_by_merchant(merchant.id)
 
-    def update_menu_item(self, user_id: int, menu_id: int, data: MenuUpdateRequest) -> Menu:
+    def update_menu_item(
+        self, user_id: int, menu_id: int, data: MenuUpdateRequest
+    ) -> Menu:
         merchant = self._get_approved_merchant(user_id)
         menu = self._get_own_menu(merchant.id, menu_id)
         update_data = data.model_dump(exclude_unset=True)

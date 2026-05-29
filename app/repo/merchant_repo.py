@@ -13,10 +13,14 @@ class MerchantRepository:
     # ── Merchant ──
 
     def get_by_id(self, merchant_id: int) -> MerchantInfo | None:
-        return self.db.query(MerchantInfo).filter(MerchantInfo.id == merchant_id).first()
+        return (
+            self.db.query(MerchantInfo).filter(MerchantInfo.id == merchant_id).first()
+        )
 
     def get_by_user_id(self, user_id: int) -> MerchantInfo | None:
-        return self.db.query(MerchantInfo).filter(MerchantInfo.user_id == user_id).first()
+        return (
+            self.db.query(MerchantInfo).filter(MerchantInfo.user_id == user_id).first()
+        )
 
     def create_merchant(self, merchant: MerchantInfo) -> MerchantInfo:
         self.db.add(merchant)
@@ -76,7 +80,9 @@ class MerchantRepository:
         )
         return results
 
-    def get_today_pending_orders(self, merchant_id: int, target_date: date) -> list[Order]:
+    def get_today_pending_orders(
+        self, merchant_id: int, target_date: date
+    ) -> list[Order]:
         return (
             self.db.query(Order)
             .join(OrderItem, Order.id == OrderItem.order_id)
