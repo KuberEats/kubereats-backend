@@ -25,8 +25,10 @@ class CommitteeRepository:
             self.db.query(MerchantInfo).order_by(MerchantInfo.created_at.desc()).all()
         )
 
-    def update_audit_status(self, merchant: MerchantInfo, status: int) -> MerchantInfo:
-        merchant.audit_status = status
+    def update_audit_status(
+        self, merchant: MerchantInfo, new_status: int
+    ) -> MerchantInfo:
+        merchant.audit_status = new_status
         self.db.flush()
         return merchant
 
