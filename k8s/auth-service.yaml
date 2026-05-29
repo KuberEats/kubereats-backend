@@ -1,0 +1,106 @@
+# ── ConfigMap ────────────────────────────────────────────────────────────────
+# Non-sensitive configuration. Safe to commit.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+data:
+  JWT_ALGORITHM: "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  REFRESH_TOKEN_EXPIRE_DAYS: "7"
+---
+# ── Secret ───────────────────────────────────────────────────────────────────
+# Sensitive values. In production, manage via GCP Secret Manager or
+# replace stringData with references to an external secrets operator.
+#
+# IMPORTANT: change all values before deploying to production.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth-service-secret
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://user:password@postgres:5432/kubereats_auth"
+  JWT_SECRET_KEY: "change-me-in-production"
+---
+# ── Deployment ───────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: api
+          # Replace with your GCP Artifact Registry path, e.g.:
+          # asia-east1-docker.pkg.dev/PROJECT_ID/kubereats/auth-service:latest
+          image: kubereats/auth-service:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: auth-service-config
+            - secretRef:
+                name: auth-service-secret
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+---
+# ── Service ──────────────────────────────────────────────────────────────────
+# ClusterIP: auth-service is reachable within the cluster only.
+# External traffic should go through an Ingress controller.
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  selector:
+    app: auth-service
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+# ── NetworkPolicy ─────────────────────────────────────────────────────────────
+# Allow any pod in the cluster to call auth-service (all services need to
+# validate tokens).  Deny all other ingress by default.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: auth-service-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: auth-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8000
