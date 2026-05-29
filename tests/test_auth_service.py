@@ -99,9 +99,19 @@ def test_refresh_success(auth_service):
 
 
 def test_refresh_old_token_is_invalidated(auth_service):
+    from datetime import datetime, timedelta, timezone
+    from unittest.mock import patch
+
     _register_user(auth_service)
     tokens = auth_service.login("user1", "password123")
-    auth_service.refresh(tokens["refresh_token"])
+
+    new_expire = datetime.now(timezone.utc) + timedelta(days=7)
+    with patch(
+        "app.services.auth_service.create_refresh_token",
+        return_value=("new-unique-rotated-token", new_expire),
+    ):
+        auth_service.refresh(tokens["refresh_token"])
+
     with pytest.raises(HTTPException) as exc:
         auth_service.refresh(tokens["refresh_token"])
     assert exc.value.status_code == 401
