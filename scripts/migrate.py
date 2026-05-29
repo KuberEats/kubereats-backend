@@ -51,9 +51,7 @@ def run_postgres(engine) -> None:
 
         applied = {
             row[0]
-            for row in conn.execute(
-                text("SELECT filename FROM schema_migrations")
-            )
+            for row in conn.execute(text("SELECT filename FROM schema_migrations"))
         }
 
         for sql_file in sql_files:
@@ -64,9 +62,7 @@ def run_postgres(engine) -> None:
             print(f"  apply {sql_file.name} ...")
             conn.execute(text(sql_file.read_text(encoding="utf-8")))
             conn.execute(
-                text(
-                    "INSERT INTO schema_migrations (filename) VALUES (:name)"
-                ),
+                text("INSERT INTO schema_migrations (filename) VALUES (:name)"),
                 {"name": sql_file.name},
             )
             print(f"  done  {sql_file.name}")
@@ -86,9 +82,7 @@ def main() -> None:
     elif engine.dialect.name == "postgresql":
         run_postgres(engine)
     else:
-        raise RuntimeError(
-            f"Unsupported database dialect: {engine.dialect.name}"
-        )
+        raise RuntimeError(f"Unsupported database dialect: {engine.dialect.name}")
 
 
 if __name__ == "__main__":
