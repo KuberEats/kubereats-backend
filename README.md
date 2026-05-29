@@ -1,12 +1,13 @@
 # KuberEats Merchant Service
 
-商家管理服務 — 負責商家入駐申請、商家資訊管理、菜單 CRUD、今日訂單彙整。
+商家管理服務 — 負責商家入駐申請、商家資訊管理、菜單 CRUD、今日訂單彙整與確認。
 
 ## Tech Stack
 
 - **Framework**: FastAPI
 - **Database**: PostgreSQL + SQLAlchemy
 - **Auth**: JWT (PyJWT) — 僅驗證 token，不發 token
+- **Config**: pydantic-settings
 - **Package Manager**: uv
 - **Python**: 3.12
 
@@ -14,43 +15,54 @@
 
 ```
 app/
-├── main.py                      # FastAPI entry point (merchant_router only)
+├── main.py                      # FastAPI entry point、health probes
 ├── database.py                  # SQLAlchemy engine & session
 ├── core/
-│   ├── security.py              # JWT decode (verify only, no token creation)
-│   └── dependencies.py          # get_current_user, require_role
+│   ├── config.py                # 環境變數集中管理（pydantic-settings）
+│   ├── logging.py               # 結構化 JSON logging（GCP Cloud Logging 相容）
+│   ├── security.py              # JWT decode（verify only，不發 token）
+│   └── dependencies.py          # get_current_user、require_role
 ├── models/
-│   └── kubereats.py             # UserInfo, MerchantInfo, Menu, Order, OrderItem
+│   └── kubereats.py             # UserInfo、MerchantInfo、Menu、Order、OrderItem
 ├── schemas/
-│   └── merchant.py              # Merchant, Menu, OrderSummary schemas
+│   └── merchant.py              # Merchant、Menu、OrderSummary schemas
 ├── repo/
-│   └── merchant_repo.py         # Merchant, menu CRUD & order summary query
+│   └── merchant_repo.py         # Merchant、Menu CRUD 與訂單查詢
 ├── services/
-│   └── merchant_service.py      # Apply, menu CRUD, order summary logic
+│   └── merchant_service.py      # Apply、Menu CRUD、訂單彙整邏輯
 └── routes/
     └── merchant_route.py        # Merchant API endpoints
+migrations/
+└── 001_create_merchant_tables.sql  # DB schema（有版本追蹤）
+scripts/
+└── migrate.py                   # Migration runner（已跑過的自動跳過）
+k8s/
+└── merchant-service.yaml        # K8s ConfigMap / Secret / Deployment / Service / NetworkPolicy
 ```
 
 ## API Endpoints
 
-| Method | Path                      | Description        | Auth                    |
-|--------|---------------------------|--------------------|-------------------------|
-| POST   | `/merchants/apply`        | 申請入駐平台        | merchant role           |
-| GET    | `/merchants/me`           | 取得商家資訊        | merchant role           |
-| PUT    | `/merchants/me`           | 更新商家資訊        | merchant role           |
-| POST   | `/merchants/menu`         | 新增菜品           | merchant role (已核准)   |
-| GET    | `/merchants/menu`         | 列出自己的菜品      | merchant role           |
-| PUT    | `/merchants/menu/{id}`    | 更新菜品           | merchant role (已核准)   |
-| DELETE | `/merchants/menu/{id}`    | 刪除菜品           | merchant role (已核准)   |
-| GET    | `/merchants/orders/today` | 今日訂單彙整        | merchant role (已核准)   |
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| POST | `/merchants/apply` | 申請入駐平台 | merchant role |
+| GET | `/merchants/me` | 取得商家資訊 | merchant role |
+| PUT | `/merchants/me` | 更新商家資訊 | merchant role |
+| POST | `/merchants/menu` | 新增菜品 | merchant role（已核准）|
+| GET | `/merchants/menu` | 列出自己的菜品 | merchant role |
+| PUT | `/merchants/menu/{id}` | 更新菜品 | merchant role（已核准）|
+| DELETE | `/merchants/menu/{id}` | 刪除菜品 | merchant role（已核准）|
+| GET | `/merchants/orders/today` | 今日訂單彙整 | merchant role（已核准）|
+| POST | `/merchants/orders/confirm-today` | 確認今日所有待處理訂單 | merchant role（已核准）|
+| GET | `/health/live` | Liveness probe | No |
+| GET | `/health/ready` | Readiness probe（含 DB 連線確認）| No |
 
 ## Merchant Audit Status
 
 | 狀態碼 | 說明 | 可執行操作 |
 |--------|------|-----------|
-| `0`    | 待審核 (Pending) | 僅查看商家資訊 |
-| `1`    | 已核准 (Approved) | 菜單管理 + 查看訂單 |
-| `2`    | 已駁回 (Rejected) | 僅查看商家資訊 |
+| `0` | 待審核（Pending） | 僅查看商家資訊 |
+| `1` | 已核准（Approved） | 菜單管理 + 查看 / 確認訂單 |
+| `2` | 已駁回（Rejected） | 僅查看商家資訊 |
 
 ## Architecture
 
@@ -58,58 +70,92 @@ app/
 
 ```
 Frontend (nginx) ─┬→ auth-service        /auth/*
-                  ├→ merchant-service    /merchants/apply, /me, /menu  ← 本服務
+                  ├→ merchant-service    /merchants/*   ← 本服務
                   ├→ committee-service   /committee/*
-                  └→ order-service       /merchants (瀏覽), /orders/*
-                          │
-                    共用 PostgreSQL
+                  └→ order-service       /orders/*
 ```
 
-- **JWT**: auth-service 負責發 token，本服務僅驗證 token（共用同一個 `JWT_SECRET_KEY`）
-- **DB**: 共用資料庫，本服務管理 `merchant_info`、`menu` 表，讀取 `orders`、`order_items` 表
+- **JWT**: auth-service 負責發 token，本服務只驗證（共用同一個 `JWT_SECRET_KEY`）
+- **DB**: 本服務管理 `merchant_info`、`menu` 表，讀寫 `orders`、`order_items` 表
 
 ## Merchant Flow
 
 ```
-1. 註冊商家帳號:  POST /auth/register {role: "merchant"}  (auth-service)
-2. 登入取得 token: POST /auth/login                       (auth-service)
-3. 申請入駐:      POST /merchants/apply {merchantName, campus, ...}
-4. 等待福委會核准  (committee-service)
-5. 管理菜單:      POST/PUT/DELETE /merchants/menu
-6. 查看今日訂單:   GET /merchants/orders/today
+1. 註冊商家帳號:    POST /auth/register {role: "merchant"}   (auth-service)
+2. 登入取得 token:  POST /auth/login                         (auth-service)
+3. 申請入駐:        POST /merchants/apply {merchantName, ...}
+4. 等待福委會核准   (committee-service)
+5. 管理菜單:        POST/PUT/DELETE /merchants/menu
+6. 查看今日訂單:    GET  /merchants/orders/today
+7. 確認今日訂單:    POST /merchants/orders/confirm-today
 ```
 
-## Setup
+## Local Development
 
 ### Prerequisites
 
-- Python 3.12+
-- PostgreSQL
+- [Docker](https://docs.docker.com/get-docker/)
 - [uv](https://docs.astral.sh/uv/)
 
-### Install & Run
+### 1. 設定環境變數
 
 ```bash
-pip install uv
+cp .env.example .env
+# 視需要修改 .env 內容
+```
+
+### 2. 用 Docker Compose 啟動（建議）
+
+```bash
+docker compose up --build
+```
+
+啟動時會自動執行 `scripts/migrate.py` 建立 DB schema，再啟動 API server。
+
+- API：http://localhost:8000
+- API Docs：http://localhost:8000/docs
+
+### 3. 直接在本機執行
+
+```bash
 uv sync
+uv run python scripts/migrate.py
 uv run uvicorn app.main:app --reload
 ```
 
-### Environment Variables
+## Environment Variables
 
-| Variable | Description | Example |
+| Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL 連線字串 | `postgresql://orderdev:orderdev@localhost:5432/order_system` |
-| `JWT_SECRET_KEY` | JWT 密鑰（需與 auth-service 一致） | `your-secret-key` |
+| `DATABASE_URL` | PostgreSQL 連線字串 | `postgresql://localhost/kubereats` |
+| `JWT_SECRET_KEY` | JWT 密鑰（需與 auth-service 一致） | `dev-secret-key` |
 | `JWT_ALGORITHM` | JWT 演算法 | `HS256` |
 
-### Docker
+> **注意**：`JWT_SECRET_KEY` 必須與 auth-service 使用相同的值，否則 token 驗證會失敗。
+
+## Testing
 
 ```bash
-docker-compose up merchant-service
+uv sync
+uv run pytest tests/ -v
 ```
 
-## Response Example
+測試使用真實 PostgreSQL，需要先確保 `DATABASE_URL` 指向可連線的資料庫。
+每個測試結束後透過 transaction rollback 自動還原，不會互相影響。
+
+## Deployment（GCP + Kubernetes）
+
+```bash
+# 1. 替換 k8s/merchant-service.yaml 裡的 image 路徑
+#    image: asia-east1-docker.pkg.dev/PROJECT_ID/kubereats/merchant-service:latest
+
+# 2. 更新 Secret 裡的 DATABASE_URL 和 JWT_SECRET_KEY
+
+# 3. 套用設定
+kubectl apply -f k8s/merchant-service.yaml
+```
+
+## Response Examples
 
 ### POST /merchants/apply
 
@@ -153,5 +199,13 @@ docker-compose up merchant-service
       "totalAmount": 650.0
     }
   ]
+}
+```
+
+### POST /merchants/orders/confirm-today
+
+```json
+{
+  "confirmed_count": 15
 }
 ```
