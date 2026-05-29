@@ -1,0 +1,99 @@
+# ── ConfigMap ────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: committee-service-config
+data:
+  JWT_ALGORITHM: "HS256"
+---
+# ── Secret ───────────────────────────────────────────────────────────────────
+# IMPORTANT: change all values before deploying to production.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: committee-service-secret
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://user:password@postgres:5432/kubereats_committee"
+  JWT_SECRET_KEY: "change-me-in-production"
+---
+# ── Deployment ───────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: committee-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: committee-service
+  template:
+    metadata:
+      labels:
+        app: committee-service
+    spec:
+      containers:
+        - name: api
+          # Replace with your GCP Artifact Registry path, e.g.:
+          # asia-east1-docker.pkg.dev/PROJECT_ID/kubereats/committee-service:latest
+          image: kubereats/committee-service:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: committee-service-config
+            - secretRef:
+                name: committee-service-secret
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+---
+# ── Service ──────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: committee-service
+spec:
+  selector:
+    app: committee-service
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+# ── NetworkPolicy ─────────────────────────────────────────────────────────────
+# Only authenticated committee members can call this service (enforced at
+# application level via require_role). Allow ingress from all pods in the
+# cluster so the frontend / gateway can reach it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: committee-service-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: committee-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8000
