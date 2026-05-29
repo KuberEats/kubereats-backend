@@ -8,7 +8,9 @@ class CommitteeRepository:
         self.db = db
 
     def get_merchant_by_id(self, merchant_id: int) -> MerchantInfo | None:
-        return self.db.query(MerchantInfo).filter(MerchantInfo.id == merchant_id).first()
+        return (
+            self.db.query(MerchantInfo).filter(MerchantInfo.id == merchant_id).first()
+        )
 
     def list_pending_merchants(self) -> list[MerchantInfo]:
         return (
@@ -20,9 +22,7 @@ class CommitteeRepository:
 
     def list_all_merchants(self) -> list[MerchantInfo]:
         return (
-            self.db.query(MerchantInfo)
-            .order_by(MerchantInfo.created_at.desc())
-            .all()
+            self.db.query(MerchantInfo).order_by(MerchantInfo.created_at.desc()).all()
         )
 
     def update_audit_status(self, merchant: MerchantInfo, status: int) -> MerchantInfo:
