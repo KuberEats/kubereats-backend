@@ -32,7 +32,17 @@ async def lifespan(app: FastAPI):
                 raise e
     yield
 
+from sqlalchemy import text
+
 app = FastAPI(title="KubeEats Tagging Service", lifespan=lifespan)
+
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "healthy"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail="Unhealthy")
 
 app.add_middleware(
     CORSMiddleware,
