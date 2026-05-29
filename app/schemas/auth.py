@@ -26,7 +26,9 @@ class LoginRequest(BaseModel):
 class RefreshRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    refresh_token: str = Field(validation_alias=AliasChoices("refresh_token", "refreshToken"))
+    refresh_token: str = Field(
+        validation_alias=AliasChoices("refresh_token", "refreshToken")
+    )
 
 
 class TokenResponse(BaseModel):
