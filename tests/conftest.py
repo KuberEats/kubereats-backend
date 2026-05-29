@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base
 from app.models import kubereats  # noqa: F401 - register all models
-from app.models.kubereats import Menu, MerchantInfo, UserInfo
+from app.models.kubereats import Menu, MerchantInfo, Order, OrderItem, UserInfo
 from app.repo.merchant_repo import MerchantRepository
 from app.services.merchant_service import MerchantService
 
@@ -115,3 +115,25 @@ def test_menu(db, approved_merchant):
     db.add(menu)
     db.flush()
     return menu
+
+
+@pytest.fixture
+def today_pending_order(db, test_user, test_menu):
+    """An order placed today with status=0 (pending), containing test_menu."""
+    order = Order(
+        user_id=test_user.id,
+        total_amount=120,
+        order_status=0,
+    )
+    db.add(order)
+    db.flush()
+    item = OrderItem(
+        order_id=order.id,
+        menu_id=test_menu.id,
+        quantity=1,
+        unit_price=120,
+        subtotal=120,
+    )
+    db.add(item)
+    db.flush()
+    return order

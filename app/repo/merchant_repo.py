@@ -29,8 +29,7 @@ class MerchantRepository:
 
     def update_merchant(self, merchant: MerchantInfo, data: dict) -> MerchantInfo:
         for key, value in data.items():
-            if value is not None:
-                setattr(merchant, key, value)
+            setattr(merchant, key, value)
         self.db.flush()
         return merchant
 
@@ -49,8 +48,7 @@ class MerchantRepository:
 
     def update_menu(self, menu: Menu, data: dict) -> Menu:
         for key, value in data.items():
-            if value is not None:
-                setattr(menu, key, value)
+            setattr(menu, key, value)
         self.db.flush()
         return menu
 

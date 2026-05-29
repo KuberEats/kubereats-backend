@@ -132,3 +132,25 @@ def test_delete_menu_item_not_found_raises_404(merchant_service, approved_mercha
     with pytest.raises(HTTPException) as exc:
         merchant_service.delete_menu_item(approved_merchant.user_id, 99999)
     assert exc.value.status_code == 404
+
+
+# ── Confirm Today Orders ──
+
+
+def test_confirm_today_orders_success(
+    merchant_service, approved_merchant, today_pending_order
+):
+    result = merchant_service.confirm_today_orders(approved_merchant.user_id)
+    assert result["confirmed_count"] == 1
+    assert today_pending_order.order_status == 1
+
+
+def test_confirm_today_orders_no_pending(merchant_service, approved_merchant):
+    result = merchant_service.confirm_today_orders(approved_merchant.user_id)
+    assert result["confirmed_count"] == 0
+
+
+def test_confirm_today_orders_not_approved_raises_403(merchant_service, test_merchant):
+    with pytest.raises(HTTPException) as exc:
+        merchant_service.confirm_today_orders(test_merchant.user_id)
+    assert exc.value.status_code == 403
