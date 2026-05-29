@@ -106,9 +106,7 @@ def test_update_menu_item_success(merchant_service, approved_merchant, test_menu
     assert result.item_name == "Cheeseburger"
 
 
-def test_update_menu_item_not_found_raises_404(
-    merchant_service, approved_merchant
-):
+def test_update_menu_item_not_found_raises_404(merchant_service, approved_merchant):
     data = MenuUpdateRequest(item_name="Ghost Item")
     with pytest.raises(HTTPException) as exc:
         merchant_service.update_menu_item(approved_merchant.user_id, 99999, data)
@@ -120,9 +118,7 @@ def test_update_menu_item_no_fields_raises_400(
 ):
     data = MenuUpdateRequest()
     with pytest.raises(HTTPException) as exc:
-        merchant_service.update_menu_item(
-            approved_merchant.user_id, test_menu.id, data
-        )
+        merchant_service.update_menu_item(approved_merchant.user_id, test_menu.id, data)
     assert exc.value.status_code == 400
 
 

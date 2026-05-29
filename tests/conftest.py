@@ -1,6 +1,8 @@
 import os
 
-os.environ.setdefault("DATABASE_URL", "postgresql://postgres:test@localhost:5432/testdb")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql://postgres:test@localhost:5432/testdb"
+)
 
 import pytest
 from sqlalchemy import create_engine
