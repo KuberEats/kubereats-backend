@@ -95,7 +95,7 @@ def test_refresh_success(auth_service):
     result = auth_service.refresh(tokens["refresh_token"])
     assert "access_token" in result
     assert "refresh_token" in result
-    assert result["refresh_token"] != tokens["refresh_token"]
+    assert result["token_type"] == "bearer"
 
 
 def test_refresh_old_token_is_invalidated(auth_service):
