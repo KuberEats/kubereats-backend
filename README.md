@@ -187,13 +187,39 @@ For running the backend locally on your machine:
 
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kubereats
+OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_MODEL=google/gemini-3.1-flash-lite
+OPENROUTER_RERANK_MODEL=cohere/rerank-v3.5
 ```
 
 For running the backend inside Docker Compose:
 
 ```env
 DATABASE_URL=postgresql://postgres:postgres@postgres:5432/kubereats
+OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_MODEL=google/gemini-3.1-flash-lite
+OPENROUTER_RERANK_MODEL=cohere/rerank-v3.5
 ```
+
+`OPENROUTER_API_KEY` enables LLM-based prompt parsing in `PromptInterpreter`.
+When the key is missing, or when OpenRouter fails or times out, the backend falls
+back to the local deterministic parser. `OPENROUTER_MODEL` is optional and
+defaults to `google/gemini-3.1-flash-lite`, a low-latency, low-cost model suited
+for converting short food prompts into the `must`, `avoid`, and `prefer` intent
+JSON used by the recommendation pipeline.
+
+The same `OPENROUTER_API_KEY` also enables AI reranking in
+`HeuristicRerankerProvider`. `OPENROUTER_RERANK_MODEL` is optional and defaults
+to `cohere/rerank-v3.5`. The final recommendation score blends the existing
+heuristic score with the reranker relevance score:
+
+```txt
+normalized_rerank_score = rerank_score / max_rerank_score_in_candidate_batch
+final_score = heuristic_score * 0.35 + normalized_rerank_score * 100 * 0.65
+```
+
+If reranking is disabled or fails, the backend falls back to the original
+heuristic score.
 
 ## Run Locally
 
@@ -275,7 +301,11 @@ migrations.
 
 ## Create Dummy Data
 
-Make sure PostgreSQL is running first:
+When running from the project root, `docker compose up` automatically resets the
+dummy data before starting the backend server.
+
+To reset it manually during local backend development, make sure PostgreSQL is
+running first:
 
 ```sh
 docker compose up -d postgres

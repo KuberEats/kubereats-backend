@@ -41,6 +41,7 @@ class RecommendationService:
             intent,
             user_context,
             request.limit,
+            request.prompt,
         )
         return self.reason_generator.merchant_recommendations(ranked_candidates)
 
@@ -63,6 +64,7 @@ class RecommendationService:
             intent,
             user_context,
             request.limit,
+            request.prompt,
         )
         return self.reason_generator.menu_recommendations(ranked_candidates)
 

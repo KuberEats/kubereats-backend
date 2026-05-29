@@ -1,9 +1,17 @@
+import logging
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
 from app.models import kubereats  # noqa: F401
 from app.routes.recommendation_route import router as recommendation_router
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(levelname)s:%(name)s:%(message)s",
+)
 
 Base.metadata.create_all(bind=engine)
 

@@ -3,6 +3,8 @@ from app.services.recommendation.types import Candidate
 
 
 class SqlSearchProvider:
+    MATCHED_TERM_SCORE = 25
+
     def __init__(self, recommendation_repo):
         self.recommendation_repo = recommendation_repo
 
@@ -25,7 +27,7 @@ class SqlSearchProvider:
         matched_terms = self._matched_terms(merchant, None, intent.prefer.terms)
         return Candidate(
             merchant=merchant,
-            search_score=len(matched_terms) * 12,
+            search_score=len(matched_terms) * self.MATCHED_TERM_SCORE,
             matched_terms=matched_terms,
         )
 
@@ -34,7 +36,7 @@ class SqlSearchProvider:
         return Candidate(
             merchant=menu.merchant,
             menu=menu,
-            search_score=len(matched_terms) * 12,
+            search_score=len(matched_terms) * self.MATCHED_TERM_SCORE,
             matched_terms=matched_terms,
         )
 
