@@ -25,9 +25,6 @@ def create_tables():
 
 @pytest.fixture
 def db(create_tables):
-    from app.repo.user_repo import UserRepository
-    from app.services.auth_service import AuthService
-
     engine = create_engine(DATABASE_URL)
     TestingSessionLocal = sessionmaker(bind=engine)
     connection = engine.connect()
