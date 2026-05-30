@@ -1,7 +1,7 @@
 [project]
-name = "auth-service"
+name = "verification-service"
 version = "0.1.0"
-description = "KuberEats Auth Service"
+description = "KuberEats Verification Service"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,3 +19,6 @@ dev = [
     "pytest>=9.0.3",
     "ruff>=0.15.12",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

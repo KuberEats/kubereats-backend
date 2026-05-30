@@ -1,4 +1,4 @@
-name: CI - Auth Service
+name: CI - Verification Service
 
 on:
   push:
@@ -62,10 +62,16 @@ jobs:
         run: uv run pytest tests/ -v
 
   docker:
-    name: Docker Build
+    name: Docker Build & Kustomize
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t auth-service:ci .
+        run: docker build -t ghcr.io/kubereats/kubereats-verification:ci .
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Render Kubernetes manifests
+        run: kubectl kustomize deploy/k8s/overlays/dev

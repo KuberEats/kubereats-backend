@@ -9,26 +9,27 @@ import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
-from app.database import Base
-from app.models import kubereats  # noqa: F401 - register all models
-from app.repo.user_repo import UserRepository
-from app.services.auth_service import AuthService
-
 DATABASE_URL = os.environ["DATABASE_URL"]
 
-engine = create_engine(DATABASE_URL)
-TestingSessionLocal = sessionmaker(bind=engine)
 
-
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def create_tables():
+    from app.database import Base
+    from app.models import kubereats  # noqa: F401 - register all models
+
+    engine = create_engine(DATABASE_URL)
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
-def db():
+def db(create_tables):
+    from app.repo.user_repo import UserRepository
+    from app.services.auth_service import AuthService
+
+    engine = create_engine(DATABASE_URL)
+    TestingSessionLocal = sessionmaker(bind=engine)
     connection = engine.connect()
     transaction = connection.begin()
     session = TestingSessionLocal(bind=connection)
@@ -48,4 +49,7 @@ def db():
 
 @pytest.fixture
 def auth_service(db):
+    from app.repo.user_repo import UserRepository
+    from app.services.auth_service import AuthService
+
     return AuthService(user_repo=UserRepository(db))

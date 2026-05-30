@@ -1,16 +1,28 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.core.config import get_settings
 
-DATABASE_URL = get_settings().database_url
+settings = get_settings()
 
 
 class Base(DeclarativeBase):
     pass
 
 
-engine = create_engine(DATABASE_URL)
+connect_args = {}
+engine_kwargs = {"pool_pre_ping": True}
+
+if not settings.database_url.startswith("sqlite"):
+    engine_kwargs.update(
+        {
+            "pool_size": settings.db_pool_size,
+            "max_overflow": settings.db_max_overflow,
+            "pool_timeout": settings.db_pool_timeout,
+        }
+    )
+
+engine = create_engine(settings.database_url, connect_args=connect_args, **engine_kwargs)
 
 SessionLocal = sessionmaker(
     autocommit=False,
