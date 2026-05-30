@@ -22,7 +22,9 @@ if not settings.database_url.startswith("sqlite"):
         }
     )
 
-engine = create_engine(settings.database_url, connect_args=connect_args, **engine_kwargs)
+engine = create_engine(
+    settings.database_url, connect_args=connect_args, **engine_kwargs
+)
 
 SessionLocal = sessionmaker(
     autocommit=False,
