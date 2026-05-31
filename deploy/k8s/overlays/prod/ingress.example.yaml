@@ -1,0 +1,68 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kubereats-backend
+  namespace: kubereats-prod
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.kubereats.example.com
+      http:
+        paths:
+          - path: /api/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: verification-service
+                port:
+                  number: 80
+          - path: /api/merchants
+            pathType: Prefix
+            backend:
+              service:
+                name: merchant-service
+                port:
+                  number: 80
+          - path: /api/committee
+            pathType: Prefix
+            backend:
+              service:
+                name: committee-service
+                port:
+                  number: 80
+          - path: /api/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 80
+          - path: /api/finance
+            pathType: Prefix
+            backend:
+              service:
+                name: finance-service
+                port:
+                  number: 80
+          - path: /api/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: order-scheduler-service
+                port:
+                  number: 80
+          - path: /api/recommendations
+            pathType: Prefix
+            backend:
+              service:
+                name: recommendation-service
+                port:
+                  number: 80
+          - path: /api/tagging
+            pathType: Prefix
+            backend:
+              service:
+                name: tagging-service
+                port:
+                  number: 80
+# Optional example. Add TLS and access policy before production use.

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: committee-service-config
+data:
+  APP_ENV: prod
+  SERVICE_NAME: committee-service

@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: committee-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/kubereats/committee-service:TODO
+          imagePullPolicy: Always

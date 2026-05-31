@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubereats-prod
+  labels:
+    app.kubernetes.io/part-of: kubereats
+    app.kubernetes.io/environment: prod

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tagging-service
+  labels:
+    app.kubernetes.io/name: tagging-service
+    app.kubernetes.io/part-of: kubereats
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tagging-service
+      app.kubernetes.io/part-of: kubereats
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tagging-service
+        app.kubernetes.io/part-of: kubereats
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/kubereats/tagging-service:dev
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: tagging-service-config
+            - secretRef:
+                name: tagging-service-secret
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: merchant-service-config
+data:
+  APP_ENV: dev
+  LOG_LEVEL: info
+  SERVICE_NAME: merchant-service
+  JWT_ALGORITHM: HS256

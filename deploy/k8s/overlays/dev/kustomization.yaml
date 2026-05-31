@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kubereats-dev
+resources:
+  - namespace.yaml
+  - merchant-service
+  - committee-service
+  - notification-service
+  - finance-service
+  - order-scheduler-service
+  - recommendation-service
+  - tagging-service
+  - verification-service
+# ingress.example.yaml is optional and intentionally not included.

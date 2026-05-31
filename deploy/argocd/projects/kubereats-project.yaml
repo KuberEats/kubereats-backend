@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: kubereats
+  namespace: argocd
+spec:
+  description: Kubereats GitOps project
+  sourceRepos:
+    - git@github.com:KuberEats/kubereats-backend.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kubereats-dev
+    - server: https://kubernetes.default.svc
+      namespace: kubereats-prod
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: apps
+      kind: Deployment
+    - group: ""
+      kind: Service
+    - group: networking.k8s.io
+      kind: Ingress
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Secret
+    - group: ""
+      kind: ServiceAccount
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: batch
+      kind: Job
+    - group: batch
+      kind: CronJob

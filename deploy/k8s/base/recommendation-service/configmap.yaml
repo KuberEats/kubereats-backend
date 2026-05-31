@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recommendation-service-config
+data:
+  APP_ENV: dev
+  LOG_LEVEL: info
+  SERVICE_NAME: recommendation-service
+  OPENROUTER_MODEL: google/gemini-3.1-flash-lite
+  OPENROUTER_RERANK_MODEL: cohere/rerank-v3.5
+  OPENROUTER_TIMEOUT_SECONDS: "4"
+  OPENROUTER_RERANK_TIMEOUT_SECONDS: "4"
+  OPENROUTER_SITE_URL: http://localhost
+  OPENROUTER_APP_NAME: Kubereats

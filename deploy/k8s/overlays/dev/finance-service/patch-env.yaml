@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: finance-service-config
+data:
+  APP_ENV: dev
+  SERVICE_NAME: finance-service

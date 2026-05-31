@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verification-service-config
+data:
+  APP_ENV: dev
+  SERVICE_NAME: verification-service

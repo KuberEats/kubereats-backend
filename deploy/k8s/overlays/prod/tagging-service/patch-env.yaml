@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tagging-service-config
+data:
+  APP_ENV: prod
+  SERVICE_NAME: tagging-service

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubereats-dev
+  labels:
+    app.kubernetes.io/part-of: kubereats
+    app.kubernetes.io/environment: dev

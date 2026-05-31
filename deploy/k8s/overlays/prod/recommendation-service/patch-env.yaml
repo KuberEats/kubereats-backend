@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recommendation-service-config
+data:
+  APP_ENV: prod
+  SERVICE_NAME: recommendation-service
