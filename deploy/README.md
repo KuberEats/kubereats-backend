@@ -53,7 +53,40 @@ Phase 2a adds only:
 - `tagging-service`
 - `finance-service`
 
-Both services stay internal as `ClusterIP` services in `kubereats-dev`; no new GCP Load Balancer Hybrid NEG or NodePort is added. Both read database configuration from the existing Kubernetes Secret `kubereats-db-app` key `DATABASE_URL`. No per-service secret is required for the Phase 2a API pods.
+Both services stay internal as Kubernetes `ClusterIP` services in
+`kubereats-dev`. Public access is through the GCP External HTTPS Load Balancer
+service prefixes:
+
+```text
+https://api.kubereats.click/finance/* -> finance-backend -> finance-service
+https://api.kubereats.click/tagging/* -> tagging-backend -> tagging-service
+```
+
+The apps expose `/finance/*` and `/tagging/*` directly, so the target state does
+not require GCP URL rewrite. Both read database configuration from the existing
+Kubernetes Secret `kubereats-db-app` key `DATABASE_URL`. No per-service secret
+is required for the Phase 2a API pods.
+
+Canonical Phase 2a public routes:
+
+```text
+GET  /finance/health
+GET  /finance/merchant/income-status
+GET  /finance/merchant/payouts
+GET  /finance/merchant/monthly-total
+GET  /finance/merchant/monthly-item-distribution
+GET  /finance/staff/expenses
+GET  /finance/staff/salary-deductions
+GET  /finance/history
+POST /finance/generate-report
+
+GET  /tagging/health
+GET  /tagging/user/{user_id}
+POST /tagging/generate-barcode/{user_id}
+```
+
+Deprecated compatibility aliases may exist at `/api/finance/*` and
+`/api/tagging/*`, but the public LB contract must not use `/api/*`.
 
 Still intentionally excluded from dev sync:
 
@@ -66,6 +99,14 @@ Run the Phase 2a smoke test from this repository:
 
 ```bash
 SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/smoke-test-phase2a.sh
+```
+
+The smoke test keeps Kubernetes probes on service-internal `/health` while
+checking public LB health at:
+
+```bash
+curl -fsS https://api.kubereats.click/finance/health
+curl -fsS https://api.kubereats.click/tagging/health
 ```
 
 ## Phase 1.5 - GCP Load Balancer Hybrid NEG Mode
@@ -81,6 +122,8 @@ Phase 1.5 fixed NodePorts:
 | `merchant-service` | `31081` | `/health/live` | `https://api.kubereats.click/merchant/*` |
 | `committee-service` | `31082` | `/health/live` | `https://api.kubereats.click/committee/*` |
 | `verification-service` | `31083` | `/healthz` | `https://api.kubereats.click/verification/*` |
+| `finance-service` | managed by finance backend | `/finance/health` public, `/health` internal | `https://api.kubereats.click/finance/*` |
+| `tagging-service` | managed by tagging backend | `/tagging/health` public, `/health` internal | `https://api.kubereats.click/tagging/*` |
 
 Check Argo CD and services:
 

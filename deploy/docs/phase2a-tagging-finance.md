@@ -9,7 +9,16 @@ Phase 2a deploys only `tagging-service` and `finance-service` to the `kubereats-
 | `tagging-service` | `origin/module/tagging` | `ghcr.io/kubereats/tagging-service:<short-sha>` and `:dev` | `tagging-service` | `ClusterIP` | 80 | 8000 | `/health` |
 | `finance-service` | `origin/module/finance` | `ghcr.io/kubereats/finance-service:<short-sha>` and `:dev` | `finance-service` | `ClusterIP` | 80 | 8000 | `/health` |
 
-No NodePort is assigned in Phase 2a. The services are internal only, so `deploy/docs/gcp-lb-hybrid-neg-contract.md` does not need a Phase 2a update.
+No NodePort is assigned in Phase 2a. The GCP External HTTPS Load Balancer
+routes the public service prefixes to the existing Kubernetes Services:
+
+```text
+https://api.kubereats.click/finance/* -> finance-backend -> finance-service
+https://api.kubereats.click/tagging/* -> tagging-backend -> tagging-service
+```
+
+No GCP URL rewrite is required for these two services because the apps expose
+their canonical public prefixes directly.
 
 ## Secret Mapping
 
@@ -30,6 +39,36 @@ Both services run FastAPI on port `8000`.
 
 `tagging-service` readiness uses `/health`, which performs a lightweight DB check in the current service code. Its liveness probe uses `/` so liveness does not depend on DB. `finance-service` uses `/health`, which is an in-process health response in the current service code.
 
+## Public API Contract
+
+Canonical finance routes:
+
+```text
+GET  /finance/health
+GET  /finance/merchant/income-status
+GET  /finance/merchant/payouts
+GET  /finance/merchant/monthly-total
+GET  /finance/merchant/monthly-item-distribution
+GET  /finance/staff/expenses
+GET  /finance/staff/salary-deductions
+GET  /finance/history
+POST /finance/generate-report
+```
+
+Canonical tagging routes:
+
+```text
+GET  /tagging/health
+GET  /tagging/user/{user_id}
+POST /tagging/generate-barcode/{user_id}
+```
+
+`/api/finance/*` and `/api/tagging/*` are deprecated compatibility aliases
+only. Do not document or configure them as public LB routes. The tagging
+service still contains early prototype finance-like `/api/merchant/*`,
+`/api/staff/*`, and `/api/finance/*` routes as deprecated/internal code paths;
+they are not part of the Phase 2a public contract.
+
 ## Argo CD Verification
 
 ```bash
@@ -45,7 +84,15 @@ SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh rollout st
 SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/smoke-test-phase2a.sh
 ```
 
-The smoke test checks Phase 1 health endpoints plus `tagging-service` and `finance-service` health endpoints. It uses read-only HTTP health checks only and does not write to the database.
+The smoke test checks Phase 1 health endpoints, internal Kubernetes health
+endpoints for `tagging-service` and `finance-service`, and public LB health:
+
+```text
+https://api.kubereats.click/finance/health
+https://api.kubereats.click/tagging/health
+```
+
+It uses read-only HTTP health checks only and does not write to the database.
 
 ## Not Included
 

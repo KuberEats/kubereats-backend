@@ -4,6 +4,7 @@ set -euo pipefail
 CONTROL_PLANE_IP="${CONTROL_PLANE_IP:-192.168.17.11}"
 SSH_USER="${SSH_USER:-kubereats}"
 NAMESPACE="${NAMESPACE:-kubereats-dev}"
+PUBLIC_API_BASE_URL="${PUBLIC_API_BASE_URL:-https://api.kubereats.click}"
 
 if [[ -n "${SSH_KEY:-}" ]]; then
   RESOLVED_SSH_KEY="$SSH_KEY"
@@ -30,6 +31,7 @@ remote_script=$(cat <<'REMOTE_SCRIPT'
 set -euo pipefail
 
 namespace="${NAMESPACE:-kubereats-dev}"
+public_api_base_url="${PUBLIC_API_BASE_URL:-https://api.kubereats.click}"
 failures=0
 
 services=(
@@ -112,6 +114,24 @@ for svc_path in "${services[@]}"; do
     -- curl -fsS "http://${svc}${path}"
 done
 
+echo
+echo "== Public LB health checks =="
+public_checks=(
+  "finance:/finance/health"
+  "tagging:/tagging/health"
+)
+
+for public_check in "${public_checks[@]}"; do
+  label="${public_check%%:*}"
+  path="${public_check#*:}"
+  pod_name="tmp-curl-public-${label}"
+  check "public ${label} ${path}" kubectl run "$pod_name" \
+    --rm -i --restart=Never \
+    --image=curlimages/curl:latest \
+    -n "$namespace" \
+    -- curl -fsS "${public_api_base_url}${path}"
+done
+
 if [[ "$failures" -eq 0 ]]; then
   echo
   echo "SUCCESS: Phase 2a smoke test passed."
@@ -124,4 +144,6 @@ fi
 REMOTE_SCRIPT
 )
 
-ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "NAMESPACE=$(printf '%q' "$NAMESPACE") bash -s" <<<"$remote_script"
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
+  "NAMESPACE=$(printf '%q' "$NAMESPACE") PUBLIC_API_BASE_URL=$(printf '%q' "$PUBLIC_API_BASE_URL") bash -s" \
+  <<<"$remote_script"

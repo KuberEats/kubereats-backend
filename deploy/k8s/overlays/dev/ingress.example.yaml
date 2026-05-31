@@ -44,7 +44,7 @@ spec:
                 name: notification-service
                 port:
                   number: 80
-          - path: /api/finance
+          - path: /finance
             pathType: Prefix
             backend:
               service:
@@ -65,7 +65,7 @@ spec:
                 name: recommendation-service
                 port:
                   number: 80
-          - path: /api/tagging
+          - path: /tagging
             pathType: Prefix
             backend:
               service:

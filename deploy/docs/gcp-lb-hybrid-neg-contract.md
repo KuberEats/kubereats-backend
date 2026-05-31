@@ -19,6 +19,14 @@ api.kubereats.click/verification/*
   -> backend-service-verification
   -> hybrid-neg-verification
   -> k8s-worker-a1:31083, k8s-worker-a2:31083, k8s-worker-b1:31083, k8s-worker-b2:31083
+
+api.kubereats.click/finance/*
+  -> finance-backend
+  -> finance-service
+
+api.kubereats.click/tagging/*
+  -> tagging-backend
+  -> tagging-service
 ```
 
 ## Worker Endpoint Table
@@ -38,6 +46,11 @@ api.kubereats.click/verification/*
 | verification-service | 31083 | `/healthz` | k8s-worker-b1 | 192.168.17.31 | 192.168.17.31:31083 |
 | verification-service | 31083 | `/healthz` | k8s-worker-b2 | 192.168.17.32 | 192.168.17.32:31083 |
 
+Phase 2a `finance-service` and `tagging-service` are routed by their GCP
+backend services to the Kubernetes Services. Their public health paths are
+`/finance/health` and `/tagging/health`; Kubernetes probes continue to use the
+service-internal `/health` path.
+
 ## GCP Health Check Recommendations
 
 Use one GCP health check per backend service:
@@ -45,6 +58,8 @@ Use one GCP health check per backend service:
 - merchant backend service: HTTP health check path `/health/live`, port `31081`
 - committee backend service: HTTP health check path `/health/live`, port `31082`
 - verification backend service: HTTP health check path `/healthz`, port `31083`
+- finance backend service: HTTP health check path `/finance/health`
+- tagging backend service: HTTP health check path `/tagging/health`
 
 The Kubernetes readiness probes use DB-aware paths where applicable, but the GCP load balancer should use lightweight liveness paths unless production policy requires dependency-aware readiness.
 
@@ -52,11 +67,14 @@ The Kubernetes readiness probes use DB-aware paths where applicable, but the GCP
 
 Allow only the GCP Load Balancer / health check source ranges to reach on-prem worker NodePorts.
 
-Required destination ports:
+Required destination ports for Phase 1.5 NodePort services:
 
 - `31081` for merchant-service
 - `31082` for committee-service
 - `31083` for verification-service
+
+Add the finance/tagging backend destination ports according to the selected
+GCP backend type. The public URL map paths are `/finance/*` and `/tagging/*`.
 
 Checklist:
 
@@ -67,7 +85,10 @@ Checklist:
 
 ## Path Rewrite Notes
 
-The current services do not necessarily implement the same public prefix that the GCP URL map receives. For example, if GCP sends `/merchant/health` unchanged to merchant-service, but the service only serves `/health/live`, the backend will return `404`.
+The current Phase 1 services do not necessarily implement the same public prefix
+that the GCP URL map receives. For example, if GCP sends `/merchant/health`
+unchanged to merchant-service, but the service only serves `/health/live`, the
+backend will return `404`.
 
 Choose one path strategy before productionizing:
 
@@ -76,3 +97,21 @@ Choose one path strategy before productionizing:
 3. Put an API gateway or Kubernetes ingress in front later and route `/api/merchant/*` with rewrite there.
 
 Do not change business API routes during Phase 1.5; keep this documented until API routing is finalized.
+
+Phase 2a finance/tagging target state:
+
+```text
+/finance/* -> finance-backend -> finance-service
+/tagging/* -> tagging-backend -> tagging-service
+```
+
+No GCP URL rewrite is required for finance/tagging because those apps expose
+`/finance/*` and `/tagging/*` directly. Only use rewrite temporarily if an older
+image is still deployed:
+
+```text
+/finance/* rewrite to /api/finance/*
+/tagging/* rewrite to /api/tagging/*
+```
+
+Remove that temporary rewrite after the route-contract images are deployed.
