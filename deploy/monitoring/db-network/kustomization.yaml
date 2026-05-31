@@ -4,3 +4,4 @@ namespace: monitoring
 resources:
   - namespace.yaml
   - prometheus-rules.yaml
+  - k8s-prometheus-federation-service.yaml
