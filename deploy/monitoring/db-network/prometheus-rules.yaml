@@ -1,0 +1,88 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kubereats-k8s-local-alerts
+  labels:
+    app.kubernetes.io/name: kubereats-k8s-local-alerts
+    app.kubernetes.io/part-of: kubereats-monitoring
+spec:
+  groups:
+    - name: kubereats.kubernetes
+      rules:
+        - alert: KubernetesNodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kubernetes node is not Ready"
+            description: "Node {{ $labels.node }} has not been Ready for 10 minutes. Check kubelet, node pressure, and network reachability."
+
+        - alert: KubernetesPodCrashLooping
+          expr: max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}[5m]) >= 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod is crash looping"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} has been in CrashLoopBackOff for 5 minutes."
+
+        - alert: KubernetesDeploymentReplicasMismatch
+          expr: kube_deployment_spec_replicas != kube_deployment_status_replicas_available
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Deployment available replicas do not match desired replicas"
+            description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has unavailable replicas for 10 minutes."
+
+        - alert: KubernetesPodRestartHigh
+          expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod restart count is high"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} restarted more than 3 times in 15 minutes."
+
+        - alert: KubeletDown
+          expr: up{job="kubelet"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kubelet scrape target is down"
+            description: "Prometheus cannot scrape kubelet on {{ $labels.instance }} for 5 minutes."
+
+        - alert: KubernetesPersistentVolumeUsageHigh
+          expr: kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.85
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PersistentVolume usage is high"
+            description: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is above 85% usage for 15 minutes."
+
+    - name: kubereats.db-network
+      rules:
+        - alert: KubereatsK8sPatroniTargetDown
+          expr: up{component="postgres-ha"} == 0
+          for: 5m
+          labels:
+            severity: warning
+            env: dev
+            cluster: kubereats-postgres
+          annotations:
+            summary: "K8s-local Prometheus cannot scrape Patroni target {{ $labels.node }}"
+            description: "The Kubernetes-local Prometheus cannot scrape Patroni /metrics for {{ $labels.node }}. /patroni connectivity may still work; Prometheus requires /metrics."
+
+        - alert: KubereatsK8sPatroniPg3Unreachable
+          expr: up{component="postgres-ha",node="pg3"} == 0
+          for: 2m
+          labels:
+            severity: warning
+            env: dev
+            cluster: kubereats-postgres
+          annotations:
+            summary: "K8s-local Prometheus cannot scrape pg3 Patroni"
+            description: "The cluster-local Prometheus cannot scrape pg3 Patroni at 10.250.0.3:8008/metrics. Confirm the endpoint, Patroni metrics support, and DB network route from the cluster."

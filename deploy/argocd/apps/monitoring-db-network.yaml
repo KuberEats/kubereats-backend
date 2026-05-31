@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: kubereats-monitoring-db-network
+  namespace: argocd
+spec:
+  project: kubereats-monitoring
+  source:
+    repoURL: https://github.com/KuberEats/kubereats-backend.git
+    targetRevision: chore/k8s-prometheus-stack
+    path: deploy/monitoring/db-network
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true

@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  name: kubereats-monitoring-stack
+  namespace: argocd
+spec:
+  project: kubereats-monitoring
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 85.3.0
+      helm:
+        releaseName: kube-prometheus-stack
+        valueFiles:
+          - $values/deploy/monitoring/kube-prometheus-stack/values.yaml
+    - repoURL: https://github.com/KuberEats/kubereats-backend.git
+      targetRevision: chore/k8s-prometheus-stack
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - ApplyOutOfSyncOnly=true

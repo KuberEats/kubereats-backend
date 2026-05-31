@@ -316,3 +316,30 @@ SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get events
 - Add DB monitoring for Patroni/PostgreSQL.
 - Add Ingress TLS and internal DNS.
 - Define a production promotion flow from dev image tags to prod overlays.
+
+## Kubernetes-Local Monitoring
+
+This repository also defines a cluster-local Prometheus stack for Kubernetes observability. It does not replace the central monitoring VM at `10.250.0.4`.
+
+Monitoring resources:
+
+- `deploy/argocd/projects/kubereats-monitoring-project.yaml` creates the Argo CD project for monitoring.
+- `deploy/argocd/apps/monitoring-stack.yaml` deploys `prometheus-community/kube-prometheus-stack` into `monitoring`.
+- `deploy/argocd/apps/monitoring-db-network.yaml` deploys DB network ServiceMonitors and warning rules.
+- `deploy/monitoring/kube-prometheus-stack/values.yaml` disables cluster-local Grafana and keeps services ClusterIP-only.
+- `deploy/monitoring/db-network/` defines Patroni, postgres_exporter, and node_exporter scrape targets from inside Kubernetes.
+
+Apply the monitoring project before syncing the monitoring Applications:
+
+```bash
+ssh -i /home/edtsai/tf-cloud-init kubereats@192.168.17.11 'kubectl apply -f -' < deploy/argocd/projects/kubereats-monitoring-project.yaml
+```
+
+Access Prometheus by port-forward only:
+
+```bash
+ssh -i /home/edtsai/tf-cloud-init kubereats@192.168.17.11
+kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090 --address 127.0.0.1
+```
+
+See `docs/k8s-monitoring.md` for verification, pg3 Patroni checks, and central monitoring integration options.
