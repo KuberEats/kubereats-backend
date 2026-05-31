@@ -3,7 +3,10 @@ name: Backend API Tests
 on:
   push:
     branches:
-      - module/order-scheduler
+      - module/recommend
+  pull_request:
+    branches:
+      - module/recommend
 
 jobs:
   backend-api-tests:
@@ -27,6 +30,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kubereats
       KUBEREATS_DB_RESET_MODE: local
+      BACKEND_API_BASE_URL: http://localhost:8000
+      OPENROUTER_API_KEY: ""
 
     steps:
       - name: Checkout repository
@@ -43,9 +48,13 @@ jobs:
       - name: Install backend Python dependencies
         run: uv sync
 
+      - name: Seed recommendation test data
+        run: uv run python create_dummy_data.py
+
       - name: Start backend
         run: |
           uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
+          echo $! > backend.pid
 
       - name: Wait for backend health
         run: |
@@ -66,7 +75,18 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install backend test dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run backend API tests
         run: npm test
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL || 'google/gemini-3.1-flash-lite' }}
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then
+            kill "$(cat backend.pid)" || true
+          fi
+          pkill -f "uvicorn app.main:app" || true
