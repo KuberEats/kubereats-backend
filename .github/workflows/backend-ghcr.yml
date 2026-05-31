@@ -20,9 +20,66 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  resolve-services:
+    name: Resolve services to build
+    runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.resolve.outputs.include }}
+      has_services: ${{ steps.resolve.outputs.has_services }}
+    steps:
+      - name: Select services for this ref
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          all_services='[
+            {"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service"},
+            {"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service"},
+            {"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service"}
+          ]'
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            ref="${{ github.head_ref }}"
+          else
+            ref="${{ github.ref_name }}"
+          fi
+
+          case "$ref" in
+            module/merchant)
+              include='[{"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service"}]'
+              ;;
+            module/fuwei-system)
+              include='[{"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service"}]'
+              ;;
+            module/verification)
+              include='[{"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service"}]'
+              ;;
+            main|infra/*)
+              include="$all_services"
+              ;;
+            module/*)
+              echo "No phase-1 service mapped to ref ${ref}; skipping image build."
+              include='[]'
+              ;;
+            *)
+              include="$all_services"
+              ;;
+          esac
+
+          if [[ "$include" == "[]" ]]; then
+            echo "has_services=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_services=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "include=${include}" >> "$GITHUB_OUTPUT"
+          echo "Resolved ref=${ref}, services=${include}"
+
   phase1-images:
     name: Build ${{ matrix.service }}
-    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message || '', '[skip ci]') }}
+    needs: resolve-services
+    if: ${{ needs.resolve-services.outputs.has_services == 'true' && (github.event_name == 'pull_request' || !contains(github.event.head_commit.message || '', '[skip ci]')) }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -41,16 +98,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - service: merchant-service
-            source_ref: module/merchant
-            image_name: merchant-service
-          - service: committee-service
-            source_ref: module/fuwei-system
-            image_name: committee-service
-          - service: verification-service
-            source_ref: module/verification
-            image_name: kubereats-verification
+        include: ${{ fromJson(needs.resolve-services.outputs.include) }}
     env:
       DATABASE_URL: postgresql://postgres:test@localhost:5432/testdb
       JWT_SECRET_KEY: test-secret-key
@@ -70,9 +118,11 @@ jobs:
         run: |
           set -euo pipefail
           owner_lc=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
-          short_sha="${GITHUB_SHA::7}"
+          source_sha=$(git -C service-src rev-parse HEAD)
+          short_sha="${source_sha:0:7}"
           image="ghcr.io/${owner_lc}/${{ matrix.image_name }}"
           echo "owner_lc=${owner_lc}" >> "$GITHUB_OUTPUT"
+          echo "source_sha=${source_sha}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
           echo "image=${image}" >> "$GITHUB_OUTPUT"
 
@@ -132,26 +182,36 @@ jobs:
             ${{ steps.meta.outputs.image }}:dev
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.source_sha }}
             org.opencontainers.image.title=${{ matrix.service }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
 
-      - name: Ensure GHCR package is public
+      - name: Record image tag for GitOps
         if: github.event_name == 'push'
-        continue-on-error: true
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          curl -fsS             -X PATCH             -H "Accept: application/vnd.github+json"             -H "Authorization: Bearer ${GH_TOKEN}"             -H "X-GitHub-Api-Version: 2022-11-28"             "https://api.github.com/orgs/${GITHUB_REPOSITORY_OWNER}/packages/container/${{ matrix.image_name }}/visibility"             -d '{"visibility":"public"}'
+          printf '%s\n' "${{ steps.meta.outputs.short_sha }}" > "${{ matrix.overlay }}.tag"
+
+      - name: Upload image tag metadata
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-tag-${{ matrix.service }}
+          path: ${{ matrix.overlay }}.tag
+          retention-days: 1
 
   update-gitops-dev-tags:
     name: Update dev GitOps image tags
-    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message || '', '[skip ci]') }}
+    if: ${{ github.event_name == 'push' && needs.resolve-services.outputs.has_services == 'true' && !contains(github.event.head_commit.message || '', '[skip ci]') }}
     runs-on: ubuntu-latest
-    needs: phase1-images
+    needs:
+      - resolve-services
+      - phase1-images
+    concurrency:
+      group: gitops-dev-tags
+      cancel-in-progress: false
     steps:
       - name: Select GitOps branch
         id: gitops-ref
@@ -164,34 +224,48 @@ jobs:
           fi
           echo "ref=${gitops_ref}" >> "$GITHUB_OUTPUT"
 
+      - name: Download image tag metadata
+        uses: actions/download-artifact@v4
+        with:
+          pattern: image-tag-*
+          merge-multiple: true
+          path: image-tags
+
       - name: Checkout GitOps branch
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.gitops-ref.outputs.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Derive short SHA
-        id: sha
+      - name: Update dev image tags
+        id: tags
         shell: bash
         run: |
           set -euo pipefail
-          echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          shopt -s nullglob
+          tag_files=(image-tags/*.tag)
+          if (( ${#tag_files[@]} == 0 )); then
+            echo "No image tag metadata found."
+            exit 1
+          fi
 
-      - name: Update phase 1 dev image tags
-        shell: bash
-        env:
-          SHORT_SHA: ${{ steps.sha.outputs.short_sha }}
-        run: |
-          set -euo pipefail
-          short_sha="$SHORT_SHA"
-          python3 - <<PY2
+          summary=""
+          python3 - <<'PY'
+          import glob
           from pathlib import Path
-          overlays = [
-              Path("deploy/k8s/overlays/dev/merchant-service/kustomization.yaml"),
-              Path("deploy/k8s/overlays/dev/committee-service/kustomization.yaml"),
-              Path("deploy/k8s/overlays/dev/verification-service/kustomization.yaml"),
-          ]
-          for path in overlays:
+
+          tag_files = sorted(glob.glob("image-tags/*.tag"))
+          if not tag_files:
+              raise SystemExit("No image tag metadata found.")
+
+          summaries = []
+          for tag_file in tag_files:
+              overlay = Path(tag_file).stem
+              short_sha = Path(tag_file).read_text().strip()
+              path = Path(f"deploy/k8s/overlays/dev/{overlay}/kustomization.yaml")
+              if not path.exists():
+                  raise SystemExit(f"Overlay not found for {overlay}: {path}")
+
               text = path.read_text()
               lines = text.splitlines()
               out = []
@@ -205,18 +279,28 @@ jobs:
                       continue
                   if in_images and stripped.startswith("newTag:"):
                       indent = line[: len(line) - len(line.lstrip())]
-                      out.append(f"{indent}newTag: $short_sha")
+                      out.append(f"{indent}newTag: {short_sha}")
                       changed = True
                       in_images = False
                       continue
                   out.append(line)
+
               if not changed:
                   raise SystemExit(f"No images.newTag field updated in {path}")
+
               path.write_text("\n".join(out) + "\n")
-          PY2
+              summaries.append(f"{overlay}={short_sha}")
+
+          summary = ", ".join(summaries)
+          Path("tag-summary.txt").write_text(summary + "\n")
+          print(summary)
+          PY
+
+          summary="$(tr -d '\n' < tag-summary.txt)"
+          echo "summary=${summary}" >> "$GITHUB_OUTPUT"
 
       - name: Commit GitOps image tags
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore(gitops): update backend image tags ${{ steps.sha.outputs.short_sha }} [skip ci]"
+          commit_message: "chore(gitops): update backend image tags ${{ steps.tags.outputs.summary }} [skip ci]"
           file_pattern: deploy/k8s/overlays/dev/*/kustomization.yaml
