@@ -325,9 +325,9 @@ Monitoring resources:
 
 - `deploy/argocd/projects/kubereats-monitoring-project.yaml` creates the Argo CD project for monitoring.
 - `deploy/argocd/apps/monitoring-stack.yaml` deploys `prometheus-community/kube-prometheus-stack` into `monitoring`.
-- `deploy/argocd/apps/monitoring-db-network.yaml` deploys DB network ServiceMonitors and warning rules.
+- `deploy/argocd/apps/monitoring-db-network.yaml` deploys DB network warning rules.
 - `deploy/monitoring/kube-prometheus-stack/values.yaml` disables cluster-local Grafana and keeps services ClusterIP-only.
-- `deploy/monitoring/db-network/` defines Patroni, postgres_exporter, and node_exporter scrape targets from inside Kubernetes.
+- `deploy/monitoring/db-network/` defines DB network warning rules. DB scrape targets live in `deploy/monitoring/kube-prometheus-stack/values.yaml` as `additionalScrapeConfigs`.
 
 Apply the monitoring project before syncing the monitoring Applications:
 

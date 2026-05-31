@@ -3,6 +3,4 @@ kind: Kustomization
 namespace: monitoring
 resources:
   - namespace.yaml
-  - db-endpoint-services.yaml
-  - service-monitors.yaml
   - prometheus-rules.yaml

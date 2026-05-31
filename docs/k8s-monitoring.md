@@ -22,7 +22,7 @@ The central monitoring VM currently times out when scraping pg3 Patroni. A clust
 This repo uses Argo CD for GitOps. Monitoring is split into two Argo CD Applications:
 
 - `kubereats-monitoring-stack`: Helm chart `prometheus-community/kube-prometheus-stack` in namespace `monitoring`.
-- `kubereats-monitoring-db-network`: Kustomize resources for DB endpoint Services, EndpointSlices, ServiceMonitors, and PrometheusRules.
+- `kubereats-monitoring-db-network`: Kustomize resources for DB network warning PrometheusRules.
 
 The monitoring project is defined in:
 
@@ -50,7 +50,7 @@ kube-prometheus-stack provides:
 - kubelet and cAdvisor scraping
 - default Kubernetes alert rules
 
-Kubereats adds ServiceMonitors for these DB network targets:
+Kubereats adds `additionalScrapeConfigs` for these DB network targets:
 
 | target | endpoint | purpose |
 | --- | --- | --- |
