@@ -135,9 +135,7 @@ def test_list_public_merchants_filters_approved_by_campus(db, merchant_service):
 
 def test_list_public_merchants_sorts_by_people(db, merchant_service):
     create_public_merchant(db, "people-low", "Low", "竹科", Decimal("5.0"), 3)
-    high = create_public_merchant(
-        db, "people-high", "High", "竹科", Decimal("3.0"), 20
-    )
+    high = create_public_merchant(db, "people-high", "High", "竹科", Decimal("3.0"), 20)
 
     result = merchant_service.list_public_merchants(
         "竹科", target_date=date.today(), sort_by="people"
@@ -148,9 +146,7 @@ def test_list_public_merchants_sorts_by_people(db, merchant_service):
 
 def test_list_public_merchants_sorts_by_popular(db, merchant_service):
     create_public_merchant(db, "popular-low", "Low", "竹科", Decimal("3.0"), 99)
-    high = create_public_merchant(
-        db, "popular-high", "High", "竹科", Decimal("4.9"), 1
-    )
+    high = create_public_merchant(db, "popular-high", "High", "竹科", Decimal("4.9"), 1)
 
     result = merchant_service.list_public_merchants(
         "竹科", target_date=date.today(), sort_by="popular"
