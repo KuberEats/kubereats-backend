@@ -5,6 +5,7 @@ from app.database import Base, engine
 from app.models import kubereats  # noqa: F401
 from app.routes.internal_task_route import router as internal_task_router
 from app.routes.order_route import router as order_router
+from app.routes.reservation_route import router as reservation_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -25,6 +26,7 @@ app.add_middleware(
 )
 
 app.include_router(order_router)
+app.include_router(reservation_router)
 app.include_router(internal_task_router)
 
 
