@@ -1,6 +1,6 @@
 # KuberEats Merchant Service
 
-商家管理服務 — 負責商家入駐申請、商家資訊管理、菜單 CRUD、今日訂單彙整與確認。
+商家服務 — 負責前台商家查詢、商家入駐申請、商家資訊管理、菜單 CRUD、今日訂單彙整與確認。
 
 ## Tech Stack
 
@@ -44,6 +44,9 @@ k8s/
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
+| GET | `/merchants?campus={campus}&sort_by={sort}&date={date}` | 前台下單頁商家清單 | No |
+| GET | `/merchants/{id}` | 前台商家詳情 | No |
+| GET | `/merchants/{id}/menus` | 前台商家菜單 | No |
 | POST | `/merchants/apply` | 申請入駐平台 | merchant role |
 | GET | `/merchants/me` | 取得商家資訊 | merchant role |
 | PUT | `/merchants/me` | 更新商家資訊 | merchant role |
@@ -70,7 +73,7 @@ k8s/
 
 ```
 Frontend (nginx) ─┬→ auth-service        /auth/*
-                  ├→ merchant-service    /merchants/*   ← 本服務
+                  ├→ merchant-service    /merchants, /merchants/*   ← 本服務
                   ├→ committee-service   /committee/*
                   └→ order-service       /orders/*
 ```

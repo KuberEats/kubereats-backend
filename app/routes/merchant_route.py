@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from datetime import date as Date
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
@@ -7,6 +9,9 @@ from app.models.kubereats import UserInfo
 from app.repo.merchant_repo import MerchantRepository
 from app.schemas.merchant import (
     MerchantApplyRequest,
+    MerchantSortKey,
+    PublicMerchantDetail,
+    PublicMerchantListItem,
     MerchantResponse,
     MerchantUpdateRequest,
     MenuCreateRequest,
@@ -101,3 +106,29 @@ def confirm_today_orders(
     service: MerchantService = Depends(get_merchant_service),
 ):
     return service.confirm_today_orders(current_user.id)
+
+
+@router.get("", response_model=list[PublicMerchantListItem])
+def list_public_merchants(
+    campus: str,
+    date: Date | None = None,
+    sort_by: MerchantSortKey = Query(default="recommend"),
+    service: MerchantService = Depends(get_merchant_service),
+):
+    return service.list_public_merchants(campus, date or Date.today(), sort_by)
+
+
+@router.get("/{merchant_id}", response_model=PublicMerchantDetail)
+def get_public_merchant_detail(
+    merchant_id: int,
+    service: MerchantService = Depends(get_merchant_service),
+):
+    return service.get_public_merchant_detail(merchant_id)
+
+
+@router.get("/{merchant_id}/menus", response_model=list[MenuResponse])
+def list_public_menu_items(
+    merchant_id: int,
+    service: MerchantService = Depends(get_merchant_service),
+):
+    return service.list_public_menu_items(merchant_id)

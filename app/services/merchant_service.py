@@ -6,6 +6,7 @@ from app.models.kubereats import Menu, MerchantInfo
 from app.repo.merchant_repo import MerchantRepository
 from app.schemas.merchant import (
     MerchantApplyRequest,
+    MerchantSortKey,
     MerchantUpdateRequest,
     MenuCreateRequest,
     MenuUpdateRequest,
@@ -64,6 +65,43 @@ class MerchantService:
         self.merchant_repo.update_merchant(merchant, update_data)
         self.merchant_repo.commit()
         return merchant
+
+    # ── Public Catalog ──
+
+    def list_public_merchants(
+        self,
+        campus: str,
+        target_date: date,
+        sort_by: MerchantSortKey,
+    ) -> list[MerchantInfo]:
+        merchants = self.merchant_repo.list_approved_by_campus(campus)
+
+        if sort_by == "people":
+            return sorted(
+                merchants, key=lambda merchant: merchant.order_count, reverse=True
+            )
+
+        if sort_by == "popular":
+            return sorted(merchants, key=lambda merchant: merchant.rating, reverse=True)
+
+        return sorted(
+            merchants,
+            key=lambda merchant: float(merchant.rating) * 20 + merchant.order_count,
+            reverse=True,
+        )
+
+    def get_public_merchant_detail(self, merchant_id: int) -> MerchantInfo:
+        merchant = self.merchant_repo.get_approved_by_id(merchant_id)
+        if not merchant:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Merchant not found",
+            )
+        return merchant
+
+    def list_public_menu_items(self, merchant_id: int) -> list[Menu]:
+        merchant = self.get_public_merchant_detail(merchant_id)
+        return self.merchant_repo.list_menus_by_merchant(merchant.id)
 
     # ── Menu ──
 

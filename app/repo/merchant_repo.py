@@ -1,7 +1,7 @@
 from datetime import date
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.kubereats import Menu, MerchantInfo, Order, OrderItem
 
@@ -15,6 +15,27 @@ class MerchantRepository:
     def get_by_id(self, merchant_id: int) -> MerchantInfo | None:
         return (
             self.db.query(MerchantInfo).filter(MerchantInfo.id == merchant_id).first()
+        )
+
+    def list_approved_by_campus(self, campus: str) -> list[MerchantInfo]:
+        return (
+            self.db.query(MerchantInfo)
+            .filter(
+                MerchantInfo.campus == campus,
+                MerchantInfo.audit_status == 1,
+            )
+            .all()
+        )
+
+    def get_approved_by_id(self, merchant_id: int) -> MerchantInfo | None:
+        return (
+            self.db.query(MerchantInfo)
+            .options(joinedload(MerchantInfo.menus))
+            .filter(
+                MerchantInfo.id == merchant_id,
+                MerchantInfo.audit_status == 1,
+            )
+            .first()
         )
 
     def get_by_user_id(self, user_id: int) -> MerchantInfo | None:

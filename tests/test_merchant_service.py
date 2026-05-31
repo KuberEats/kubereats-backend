@@ -1,14 +1,53 @@
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from fastapi import HTTPException
 
+from app.models.kubereats import Menu, MerchantInfo, UserInfo
 from app.schemas.merchant import (
     MerchantApplyRequest,
     MerchantUpdateRequest,
     MenuCreateRequest,
     MenuUpdateRequest,
 )
+
+
+def create_public_merchant(
+    db,
+    username: str,
+    merchant_name: str,
+    campus: str,
+    rating: Decimal,
+    order_count: int,
+    audit_status: int = 1,
+):
+    user = UserInfo(
+        username=username,
+        email=f"{username}@test.com",
+        hashed_password="hashed",
+        role="merchant",
+        is_active=True,
+    )
+    db.add(user)
+    db.flush()
+
+    merchant = MerchantInfo(
+        user_id=user.id,
+        merchant_name=merchant_name,
+        campus=campus,
+        category="Food",
+        rating=rating,
+        order_count=order_count,
+        min_order=50,
+        max_order_quantity=10,
+        delivery_time="30 mins",
+        tags=["lunch"],
+        audit_status=audit_status,
+    )
+    db.add(merchant)
+    db.flush()
+    return merchant
 
 
 # ── Merchant ──
@@ -65,6 +104,94 @@ def test_update_my_merchant_no_fields_raises_400(merchant_service, test_merchant
     with pytest.raises(HTTPException) as exc:
         merchant_service.update_my_merchant(test_merchant.user_id, data)
     assert exc.value.status_code == 400
+
+
+# ── Public Catalog ──
+
+
+def test_list_public_merchants_filters_approved_by_campus(db, merchant_service):
+    visible = create_public_merchant(
+        db, "visible", "Visible Shop", "竹科", Decimal("4.5"), 10
+    )
+    create_public_merchant(
+        db, "other-campus", "Other Campus Shop", "南科", Decimal("5.0"), 99
+    )
+    create_public_merchant(
+        db,
+        "pending",
+        "Pending Shop",
+        "竹科",
+        Decimal("5.0"),
+        99,
+        audit_status=0,
+    )
+
+    result = merchant_service.list_public_merchants(
+        "竹科", target_date=date.today(), sort_by="recommend"
+    )
+
+    assert [merchant.id for merchant in result] == [visible.id]
+
+
+def test_list_public_merchants_sorts_by_people(db, merchant_service):
+    create_public_merchant(db, "people-low", "Low", "竹科", Decimal("5.0"), 3)
+    high = create_public_merchant(
+        db, "people-high", "High", "竹科", Decimal("3.0"), 20
+    )
+
+    result = merchant_service.list_public_merchants(
+        "竹科", target_date=date.today(), sort_by="people"
+    )
+
+    assert result[0].id == high.id
+
+
+def test_list_public_merchants_sorts_by_popular(db, merchant_service):
+    create_public_merchant(db, "popular-low", "Low", "竹科", Decimal("3.0"), 99)
+    high = create_public_merchant(
+        db, "popular-high", "High", "竹科", Decimal("4.9"), 1
+    )
+
+    result = merchant_service.list_public_merchants(
+        "竹科", target_date=date.today(), sort_by="popular"
+    )
+
+    assert result[0].id == high.id
+
+
+def test_list_public_merchants_sorts_by_recommend(db, merchant_service):
+    create_public_merchant(db, "recommend-low", "Low", "竹科", Decimal("3.0"), 10)
+    high = create_public_merchant(
+        db, "recommend-high", "High", "竹科", Decimal("4.8"), 2
+    )
+
+    result = merchant_service.list_public_merchants(
+        "竹科", target_date=date.today(), sort_by="recommend"
+    )
+
+    assert result[0].id == high.id
+
+
+def test_get_public_merchant_detail_requires_approved(merchant_service, test_merchant):
+    with pytest.raises(HTTPException) as exc:
+        merchant_service.get_public_merchant_detail(test_merchant.id)
+
+    assert exc.value.status_code == 404
+
+
+def test_list_public_menu_items(db, merchant_service, approved_merchant, test_menu):
+    second_menu = Menu(
+        merchant_id=approved_merchant.id,
+        item_name="Fries",
+        price=60,
+        max_daily_quantity=30,
+    )
+    db.add(second_menu)
+    db.flush()
+
+    result = merchant_service.list_public_menu_items(approved_merchant.id)
+
+    assert [menu.item_name for menu in result] == ["Burger", "Fries"]
 
 
 # ── Menu ──
