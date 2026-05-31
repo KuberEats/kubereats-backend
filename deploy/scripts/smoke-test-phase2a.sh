@@ -58,6 +58,10 @@ print_fail_debug() {
   for svc_path in "${services[@]}"; do
     svc="${svc_path%%:*}"
     mapfile -t pods < <(kubectl get pod -n "$namespace" -l "app.kubernetes.io/name=$svc" --no-headers -o custom-columns=NAME:.metadata.name 2>/dev/null || true)
+    if [[ ${#pods[@]} -eq 0 ]]; then
+      echo "-- no pods for $svc --"
+      continue
+    fi
     for pod in "${pods[@]:-}"; do
       echo "-- logs $pod --"
       kubectl logs "$pod" -n "$namespace" --all-containers --tail=100 || true
