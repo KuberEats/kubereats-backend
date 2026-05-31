@@ -4,12 +4,15 @@ Phase 2a deploys only `tagging-service` and `finance-service` to the `kubereats-
 
 ## Services
 
-| Service | Source branch | Image | Kubernetes Service | Type | Service port | Container port | Health endpoint |
-| --- | --- | --- | --- | --- | ---: | ---: | --- |
-| `tagging-service` | `origin/module/tagging` | `ghcr.io/kubereats/tagging-service:<short-sha>` and `:dev` | `tagging-service` | `ClusterIP` | 80 | 8000 | `/health` |
-| `finance-service` | `origin/module/finance` | `ghcr.io/kubereats/finance-service:<short-sha>` and `:dev` | `finance-service` | `ClusterIP` | 80 | 8000 | `/health` |
+| Service | Source branch | Image | Kubernetes Service | Type | Service port | NodePort | Container port | Health endpoint |
+| --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
+| `tagging-service` | `origin/module/tagging` | `ghcr.io/kubereats/tagging-service:<short-sha>` and `:dev` | `tagging-service` | `NodePort` | 80 | 31084 | 8000 | `/health` |
+| `finance-service` | `origin/module/finance` | `ghcr.io/kubereats/finance-service:<short-sha>` and `:dev` | `finance-service` | `NodePort` | 80 | 31085 | 8000 | `/health` |
 
-No NodePort is assigned in Phase 2a. The services are internal only, so `deploy/docs/gcp-lb-hybrid-neg-contract.md` does not need a Phase 2a update.
+Phase 2a uses fixed NodePorts to match the existing GCP Load Balancer Hybrid NEG pattern:
+
+- `tagging-service`: `31084`
+- `finance-service`: `31085`
 
 ## Secret Mapping
 

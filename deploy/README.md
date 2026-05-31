@@ -53,7 +53,14 @@ Phase 2a adds only:
 - `tagging-service`
 - `finance-service`
 
-Both services stay internal as `ClusterIP` services in `kubereats-dev`; no new GCP Load Balancer Hybrid NEG or NodePort is added. Both read database configuration from the existing Kubernetes Secret `kubereats-db-app` key `DATABASE_URL`. No per-service secret is required for the Phase 2a API pods.
+Both services are exposed in dev with fixed NodePorts for the GCP Load Balancer Hybrid NEG path:
+
+| service | nodePort | health path | public route intent |
+| --- | ---: | --- | --- |
+| `tagging-service` | `31084` | `/health` | `https://api.kubereats.click/tagging/*` |
+| `finance-service` | `31085` | `/health` | `https://api.kubereats.click/finance/*` |
+
+Both services read database configuration from the existing Kubernetes Secret `kubereats-db-app` key `DATABASE_URL`. No per-service secret is required for the Phase 2a API pods.
 
 Still intentionally excluded from dev sync:
 
@@ -81,6 +88,8 @@ Phase 1.5 fixed NodePorts:
 | `merchant-service` | `31081` | `/health/live` | `https://api.kubereats.click/merchant/*` |
 | `committee-service` | `31082` | `/health/live` | `https://api.kubereats.click/committee/*` |
 | `verification-service` | `31083` | `/healthz` | `https://api.kubereats.click/verification/*` |
+| `tagging-service` | `31084` | `/health` | `https://api.kubereats.click/tagging/*` |
+| `finance-service` | `31085` | `/health` | `https://api.kubereats.click/finance/*` |
 
 Check Argo CD and services:
 

@@ -19,6 +19,16 @@ api.kubereats.click/verification/*
   -> backend-service-verification
   -> hybrid-neg-verification
   -> k8s-worker-a1:31083, k8s-worker-a2:31083, k8s-worker-b1:31083, k8s-worker-b2:31083
+
+api.kubereats.click/tagging/*
+  -> backend-service-tagging
+  -> hybrid-neg-tagging
+  -> k8s-worker-a1:31084, k8s-worker-a2:31084, k8s-worker-b1:31084, k8s-worker-b2:31084
+
+api.kubereats.click/finance/*
+  -> backend-service-finance
+  -> hybrid-neg-finance
+  -> k8s-worker-a1:31085, k8s-worker-a2:31085, k8s-worker-b1:31085, k8s-worker-b2:31085
 ```
 
 ## Worker Endpoint Table
@@ -37,6 +47,14 @@ api.kubereats.click/verification/*
 | verification-service | 31083 | `/healthz` | k8s-worker-a2 | 192.168.17.22 | 192.168.17.22:31083 |
 | verification-service | 31083 | `/healthz` | k8s-worker-b1 | 192.168.17.31 | 192.168.17.31:31083 |
 | verification-service | 31083 | `/healthz` | k8s-worker-b2 | 192.168.17.32 | 192.168.17.32:31083 |
+| tagging-service | 31084 | `/health` | k8s-worker-a1 | 192.168.17.21 | 192.168.17.21:31084 |
+| tagging-service | 31084 | `/health` | k8s-worker-a2 | 192.168.17.22 | 192.168.17.22:31084 |
+| tagging-service | 31084 | `/health` | k8s-worker-b1 | 192.168.17.31 | 192.168.17.31:31084 |
+| tagging-service | 31084 | `/health` | k8s-worker-b2 | 192.168.17.32 | 192.168.17.32:31084 |
+| finance-service | 31085 | `/health` | k8s-worker-a1 | 192.168.17.21 | 192.168.17.21:31085 |
+| finance-service | 31085 | `/health` | k8s-worker-a2 | 192.168.17.22 | 192.168.17.22:31085 |
+| finance-service | 31085 | `/health` | k8s-worker-b1 | 192.168.17.31 | 192.168.17.31:31085 |
+| finance-service | 31085 | `/health` | k8s-worker-b2 | 192.168.17.32 | 192.168.17.32:31085 |
 
 ## GCP Health Check Recommendations
 
@@ -45,6 +63,8 @@ Use one GCP health check per backend service:
 - merchant backend service: HTTP health check path `/health/live`, port `31081`
 - committee backend service: HTTP health check path `/health/live`, port `31082`
 - verification backend service: HTTP health check path `/healthz`, port `31083`
+- tagging backend service: HTTP health check path `/health`, port `31084`
+- finance backend service: HTTP health check path `/health`, port `31085`
 
 The Kubernetes readiness probes use DB-aware paths where applicable, but the GCP load balancer should use lightweight liveness paths unless production policy requires dependency-aware readiness.
 
@@ -57,10 +77,12 @@ Required destination ports:
 - `31081` for merchant-service
 - `31082` for committee-service
 - `31083` for verification-service
+- `31084` for tagging-service
+- `31085` for finance-service
 
 Checklist:
 
-- Permit GCP LB / health check source ranges to the worker node InternalIPs on `31081-31083`.
+- Permit GCP LB / health check source ranges to the worker node InternalIPs on `31081-31085`.
 - Confirm the on-prem firewall path from GCP to `192.168.17.21`, `192.168.17.22`, `192.168.17.31`, and `192.168.17.32`.
 - Do not open NodePort access to the whole internet unless another firewall layer restricts traffic to the GCP LB path.
 - Keep Argo CD private; do not expose Argo CD through this public load balancer.
