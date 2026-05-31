@@ -11,8 +11,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # In a real microservice, we might use Alembic
-    # For local dev, we init db with dummy data
-    init_db()
+    # init_db() was removed to avoid modifying shared remote DB schema
     yield
 
 app = FastAPI(title="KubeEats Finance Microservice", lifespan=lifespan)

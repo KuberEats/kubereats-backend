@@ -1,17 +1,8 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: kubereats
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
+  # Local Postgres is removed since we are using the remote DB at 35.201.144.17
+  
   redis:
     image: redis:7-alpine
     ports:
@@ -19,13 +10,13 @@ services:
 
   backend-api:
     build: .
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/kubereats
-      REDIS_URL: redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
       - redis
     volumes:
       - ./reports:/app/reports
@@ -33,11 +24,11 @@ services:
   worker:
     build: .
     command: celery -A app.worker.celery_app worker --loglevel=info
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/kubereats
-      REDIS_URL: redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
-      - postgres
       - redis
     volumes:
       - ./reports:/app/reports
@@ -45,12 +36,9 @@ services:
   beat:
     build: .
     command: celery -A app.worker.celery_app beat --loglevel=info
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/kubereats
-      REDIS_URL: redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
-      - postgres
       - redis
-
-volumes:
-  postgres_data:

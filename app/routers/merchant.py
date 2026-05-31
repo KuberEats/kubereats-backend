@@ -21,3 +21,11 @@ def get_monthly_total(merchant_id: int, db: Session = Depends(database.get_db)):
 @router.get("/monthly-item-distribution", response_model=list[schemas.MonthlyItemDistribution])
 def get_monthly_item_distribution(merchant_id: int, db: Session = Depends(database.get_db)):
     return MerchantFinanceService.get_monthly_item_distribution(db, merchant_id)
+
+# @router.get("/test-connection")
+# def test_connection(db: Session = Depends(database.get_db)):
+#     from .. import models
+#     merchant = db.query(models.MerchantInfo).filter(models.MerchantInfo.id == 1).first()
+#     if not merchant:
+#         return {"message": "Connected to DB, but no merchant with ID 1 found."}
+#     return {"message": "Success", "merchant_name": merchant.merchant_name}
