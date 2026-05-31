@@ -13,7 +13,22 @@ docker-compose down -v
 
 The GCP Load Balancer public prefix for this service is `/finance`.
 
-Canonical routes:
+Canonical service-internal routes, assuming the GCP Load Balancer strips the
+`/finance` service prefix before forwarding:
+
+```text
+GET  /health
+GET  /merchant/income-status
+GET  /merchant/payouts
+GET  /merchant/monthly-total
+GET  /merchant/monthly-item-distribution
+GET  /staff/expenses
+GET  /staff/salary-deductions
+GET  /history
+POST /generate-report
+```
+
+Public LB routes remain:
 
 ```text
 GET  /finance/health
@@ -27,7 +42,9 @@ GET  /finance/history
 POST /finance/generate-report
 ```
 
-`/health` remains available for Kubernetes liveness/readiness probes.
+The backend also keeps `/finance/*` aliases temporarily for environments that
+forward paths without stripping the service prefix. `/health` remains available
+for Kubernetes liveness/readiness probes.
 
 Deprecated compatibility aliases:
 

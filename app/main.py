@@ -21,9 +21,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(merchant.router, prefix="/finance/merchant", tags=["finance"])
-app.include_router(staff.router, prefix="/finance/staff", tags=["finance"])
-app.include_router(finance.router, prefix="/finance", tags=["finance"])
+app.include_router(merchant.router, prefix="/merchant", tags=["finance"])
+app.include_router(staff.router, prefix="/staff", tags=["finance"])
+app.include_router(finance.router, tags=["finance"])
+
+# Deprecated compatibility aliases for environments that do not strip the
+# service prefix at the load balancer.
+app.include_router(
+    merchant.router,
+    prefix="/finance/merchant",
+    tags=["finance-deprecated"],
+    deprecated=True,
+)
+app.include_router(
+    staff.router,
+    prefix="/finance/staff",
+    tags=["finance-deprecated"],
+    deprecated=True,
+)
+app.include_router(
+    finance.router,
+    prefix="/finance",
+    tags=["finance-deprecated"],
+    deprecated=True,
+)
 
 # Deprecated compatibility aliases. Public LB routes must use /finance/*.
 app.include_router(

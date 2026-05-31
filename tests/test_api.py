@@ -39,18 +39,30 @@ def test_read_root():
     assert response.json() == {"message": "Welcome to KubeEats Finance Microservice"}
 
 def test_get_finance_history():
+    response = client.get("/history")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_get_finance_history_prefixed_alias():
     response = client.get("/finance/history")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 
-def test_get_finance_history_legacy_alias():
+def test_get_finance_history_legacy_api_alias():
     response = client.get("/api/finance/history")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 
 def test_finance_public_health():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_finance_prefixed_health_alias():
     response = client.get("/finance/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
@@ -95,7 +107,7 @@ def test_get_monthly_item_distribution_api():
     db.close()
     
     response = client.get(
-        f"/finance/merchant/monthly-item-distribution?merchant_id={merchant_id}"
+        f"/merchant/monthly-item-distribution?merchant_id={merchant_id}"
     )
     assert response.status_code == 200
     data = response.json()
