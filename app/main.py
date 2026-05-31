@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.models import kubereats  # noqa: F401
 from app.routes.internal_task_route import router as internal_task_router
-from app.routes.merchant_route import router as merchant_router
 from app.routes.order_route import router as order_router
 
 Base.metadata.create_all(bind=engine)
@@ -25,7 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(merchant_router)
 app.include_router(order_router)
 app.include_router(internal_task_router)
 
