@@ -7,5 +7,4 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/kubereats/tagging-service:dev
           imagePullPolicy: Always

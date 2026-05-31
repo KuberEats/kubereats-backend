@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - "deploy/**"
       - "infra/**"
       - "module/**"
     paths-ignore:
@@ -33,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          all_services='[{"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service"},{"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service"},{"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service"}]'
+          all_services='[{"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service","run_lint":"true"},{"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service","run_lint":"true"},{"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service","run_lint":"true"},{"service":"tagging-service","source_ref":"module/tagging","image_name":"tagging-service","overlay":"tagging-service","run_lint":"false"},{"service":"finance-service","source_ref":"module/finance","image_name":"finance-service","overlay":"finance-service","run_lint":"false"}]'
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             ref="${{ github.head_ref }}"
@@ -43,19 +44,25 @@ jobs:
 
           case "$ref" in
             module/merchant)
-              include='[{"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service"}]'
+              include='[{"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service","run_lint":"true"}]'
               ;;
             module/fuwei-system)
-              include='[{"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service"}]'
+              include='[{"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service","run_lint":"true"}]'
               ;;
             module/verification)
-              include='[{"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service"}]'
+              include='[{"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service","run_lint":"true"}]'
               ;;
-            main|infra/*)
+            module/tagging)
+              include='[{"service":"tagging-service","source_ref":"module/tagging","image_name":"tagging-service","overlay":"tagging-service","run_lint":"false"}]'
+              ;;
+            module/finance)
+              include='[{"service":"finance-service","source_ref":"module/finance","image_name":"finance-service","overlay":"finance-service","run_lint":"false"}]'
+              ;;
+            main|deploy/*|infra/*)
               include="$all_services"
               ;;
             module/*)
-              echo "No phase-1 service mapped to ref ${ref}; skipping image build."
+              echo "No backend service mapped to ref ${ref}; skipping image build."
               include='[]'
               ;;
             *)
@@ -137,6 +144,7 @@ jobs:
         run: uv sync --dev
 
       - name: Lint
+        if: ${{ matrix.run_lint == 'true' }}
         working-directory: service-src
         run: uv run ruff check .
 
