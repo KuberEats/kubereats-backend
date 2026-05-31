@@ -21,7 +21,8 @@ alertmanager:
 
 prometheus:
   service:
-    type: ClusterIP
+    type: NodePort
+    nodePort: 30990
   prometheusSpec:
     retention: 7d
     scrapeInterval: 30s
