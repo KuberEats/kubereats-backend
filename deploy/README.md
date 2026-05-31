@@ -48,6 +48,43 @@ Temporarily excluded from dev sync:
 
 This keeps the first Argo CD sync focused on validating the GitOps path, image pull, secrets, and health checks without letting services with missing production Dockerfiles or external dependencies degrade the whole app.
 
+## Phase 1.5 - GCP Load Balancer Hybrid NEG Mode
+
+Dev does not use Kubernetes Ingress in Phase 1.5. Public HTTPS and path routing are handled by the GCP External HTTPS Load Balancer. Kubernetes exposes fixed NodePorts on the worker nodes so GCP Hybrid NEG endpoints can target `WorkerInternalIP:NodePort`.
+
+Argo CD still owns the Kubernetes desired state under `deploy/k8s/overlays/dev`. GCP Load Balancer, backend services, health checks, firewall rules, and Hybrid NEG resources should be managed separately, preferably by Terraform.
+
+Phase 1.5 fixed NodePorts:
+
+| service | nodePort | health path | public route intent |
+| --- | ---: | --- | --- |
+| `merchant-service` | `31081` | `/health/live` | `https://api.kubereats.click/merchant/*` |
+| `committee-service` | `31082` | `/health/live` | `https://api.kubereats.click/committee/*` |
+| `verification-service` | `31083` | `/healthz` | `https://api.kubereats.click/verification/*` |
+
+Check Argo CD and services:
+
+```bash
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get applications -n argocd
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get svc -n kubereats-dev
+```
+
+Run NodePort verification from your workstation:
+
+```bash
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/verify-nodeport-phase1.sh
+```
+
+GCP LB examples after Hybrid NEGs, backend services, URL map, and firewall rules are configured:
+
+```bash
+curl -fsS https://api.kubereats.click/merchant/health/live
+curl -fsS https://api.kubereats.click/committee/health/live
+curl -fsS https://api.kubereats.click/verification/healthz
+```
+
+Path rewrite warning: if the GCP URL map forwards `/merchant/health/live` unchanged, merchant-service may return `404` because the service currently serves `/health/live`. Configure GCP URL map path rewrite, add backend prefix routes later, or introduce an API gateway/ingress layer in a later phase. See `deploy/docs/gcp-lb-hybrid-neg-contract.md`.
+
 ## GHCR Image Build And Publish
 
 `.github/workflows/backend-ghcr.yml` builds only the phase 1 services for now:
