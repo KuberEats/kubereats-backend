@@ -10,6 +10,7 @@ from app.schemas.recommendation import (
     MerchantRecommendation,
     RecommendationRequest,
 )
+from app.services.recommendation.metrics import recommendation_metrics
 from app.services.recommendation_service import RecommendationService
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
@@ -17,6 +18,11 @@ router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
 def get_recommendation_service(db: Session = Depends(get_db)):
     return RecommendationService(RecommendationRepository(db))
+
+
+@router.get("/grafana-check")
+def grafana_check():
+    return recommendation_metrics.snapshot()
 
 
 @router.post("/merchants", response_model=list[MerchantRecommendation])

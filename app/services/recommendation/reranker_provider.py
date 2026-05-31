@@ -4,6 +4,7 @@ import os
 import urllib.error
 import urllib.request
 
+from app.services.recommendation.metrics import recommendation_metrics
 from app.services.recommendation.text import delivery_minutes, tokenize
 from app.services.recommendation.types import RankedCandidate
 
@@ -69,21 +70,31 @@ class OpenRouterRerankClient:
                 timeout=self.timeout_seconds,
             ) as response:
                 response_body = response.read().decode("utf-8")
-        except urllib.error.HTTPError as exc:
-            details = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"OpenRouter rerank request failed: {details}") from exc
+            data = json.loads(response_body)
+            scores = [0.0 for _ in documents]
 
-        data = json.loads(response_body)
-        scores = [0.0 for _ in documents]
+            for result in data.get("results", []):
+                scores[result["index"]] = float(result["relevance_score"])
+        except Exception as exc:
+            recommendation_metrics.record_openrouter_call("rerank", "failure")
+            if isinstance(exc, urllib.error.HTTPError):
+                details = exc.read().decode("utf-8", errors="replace")
+                raise RuntimeError(
+                    f"OpenRouter rerank request failed: {details}"
+                ) from exc
 
-        for result in data.get("results", []):
-            scores[result["index"]] = float(result["relevance_score"])
+            raise
 
         logger.info(
             "OpenRouter rerank success model=%s usage=%s scores=%s",
             data.get("model", self.model),
             data.get("usage"),
             scores,
+        )
+        recommendation_metrics.record_openrouter_call(
+            "rerank",
+            "success",
+            data.get("usage"),
         )
         return scores
 
@@ -184,6 +195,7 @@ class HeuristicRerankerProvider:
         try:
             rerank_scores = self.rerank_client.rerank(query, documents)
         except Exception:
+            recommendation_metrics.record_fallback("rerank")
             logger.exception("OpenRouter rerank failed; using heuristic scores only")
             self._apply_weighted_scores(
                 ranked_candidates,

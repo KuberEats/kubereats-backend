@@ -11,6 +11,7 @@ from app.schemas.recommendation import (
     RecommendationMustConstraints,
     RecommendationPreferences,
 )
+from app.services.recommendation.metrics import recommendation_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -103,15 +104,27 @@ class OpenRouterPromptClient:
                 timeout=self.timeout_seconds,
             ) as response:
                 response_body = response.read().decode("utf-8")
-        except urllib.error.HTTPError as exc:
-            details = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"OpenRouter request failed: {details}") from exc
+            data = json.loads(response_body)
+            content = data["choices"][0]["message"]["content"]
+            intent_data = json.loads(content) if isinstance(content, str) else content
+            intent_data.setdefault("must", {})["campus"] = campus
+            intent = RecommendationIntent.model_validate(intent_data)
+        except Exception as exc:
+            recommendation_metrics.record_openrouter_call(
+                "prompt_interpret",
+                "failure",
+            )
+            if isinstance(exc, urllib.error.HTTPError):
+                details = exc.read().decode("utf-8", errors="replace")
+                raise RuntimeError(f"OpenRouter request failed: {details}") from exc
 
-        data = json.loads(response_body)
-        content = data["choices"][0]["message"]["content"]
-        intent_data = json.loads(content) if isinstance(content, str) else content
-        intent_data.setdefault("must", {})["campus"] = campus
-        intent = RecommendationIntent.model_validate(intent_data)
+            raise
+
+        recommendation_metrics.record_openrouter_call(
+            "prompt_interpret",
+            "success",
+            data.get("usage"),
+        )
         logger.info(
             "PromptInterpreter OpenRouter parsed intent=%s",
             self._intent_for_log(intent),
@@ -236,6 +249,7 @@ class PromptInterpreter:
                 self._log_success("openrouter", prompt, campus, intent)
                 return intent
             except Exception:
+                recommendation_metrics.record_fallback("prompt_interpret")
                 logger.exception("OpenRouter prompt interpretation failed; using fallback")
 
         intent = self._interpret_with_rules(prompt, campus)

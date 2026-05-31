@@ -28,6 +28,41 @@ type MenuRecommendation = {
   signals: Record<string, unknown>
 }
 
+type GrafanaCheck = {
+  service: string
+  status: string
+  api: {
+    totalRequests: number
+    successfulRequests: number
+    failedRequests: number
+    successRate: number | null
+    errorRate: number | null
+    averageLatencyMs: number | null
+    byEndpoint: Record<
+      string,
+      {
+        totalRequests: number
+        successfulRequests: number
+        failedRequests: number
+        averageLatencyMs: number | null
+      }
+    >
+  }
+  openRouter: {
+    totalCalls: number
+    successfulCalls: number
+    failedCalls: number
+    fallbackCount: number
+  }
+  openRouterUsage: {
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+    rerankSearchUnits: number
+    lastUsage: unknown
+  }
+}
+
 describe('recommendation backend API', () => {
   beforeAll(async () => {
     await waitForBackendHealth()
@@ -115,5 +150,37 @@ describe('recommendation backend API', () => {
     )
 
     expect(body.detail).toBeDefined()
+  })
+
+  it('returns in-memory metrics for Grafana checks', async () => {
+    const metrics = await getJson<GrafanaCheck>('/recommendations/grafana-check')
+
+    expect(metrics).toMatchObject({
+      service: 'recommendation',
+      status: 'ok',
+      api: {
+        totalRequests: expect.any(Number),
+        successfulRequests: expect.any(Number),
+        failedRequests: expect.any(Number),
+        byEndpoint: expect.any(Object),
+      },
+      openRouter: {
+        totalCalls: expect.any(Number),
+        successfulCalls: expect.any(Number),
+        failedCalls: expect.any(Number),
+        fallbackCount: expect.any(Number),
+      },
+      openRouterUsage: {
+        promptTokens: expect.any(Number),
+        completionTokens: expect.any(Number),
+        totalTokens: expect.any(Number),
+        rerankSearchUnits: expect.any(Number),
+      },
+    })
+    expect(metrics.api.totalRequests).toBeGreaterThanOrEqual(4)
+    expect(metrics.api.successfulRequests).toBeGreaterThanOrEqual(3)
+    expect(metrics.api.failedRequests).toBeGreaterThanOrEqual(1)
+    expect(metrics.api.averageLatencyMs).toEqual(expect.any(Number))
+    expect(metrics.api.byEndpoint['POST /recommendations/merchants']).toBeDefined()
   })
 })
