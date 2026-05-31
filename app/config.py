@@ -19,9 +19,13 @@ class Settings(BaseSettings):
 
     internal_task_auth_enabled: bool = False
     internal_task_token: str = ""
-    internal_task_handler_url: str = (
-        "http://backend:8000/internal/tasks/orders/release"
-    )
+    internal_task_handler_url: str = "http://backend:8000/internal/tasks/orders/release"
+
+    reservation_queue_mode: str = "local"
+    pubsub_topic_reservation_requested: str = ""
+    reservation_outbox_max_retries: int = 10
+    reservation_processing_lease_seconds: int = 300
+    reservation_db_polling_batch_size: int = 25
 
 
 @lru_cache
