@@ -39,9 +39,27 @@ def test_read_root():
     assert response.json() == {"message": "Welcome to KubeEats Finance Microservice"}
 
 def test_get_finance_history():
+    response = client.get("/finance/history")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_get_finance_history_legacy_alias():
     response = client.get("/api/finance/history")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+
+
+def test_finance_public_health():
+    response = client.get("/finance/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_merchant_domain_alias_is_not_exposed_from_finance_service():
+    response = client.get("/api/merchant/monthly-total?merchant_id=1")
+    assert response.status_code == 404
+
 
 def test_get_monthly_item_distribution_api():
     # Setup database with test data via override_get_db context
@@ -76,7 +94,9 @@ def test_get_monthly_item_distribution_api():
     merchant_id = merchant.id
     db.close()
     
-    response = client.get(f"/api/merchant/monthly-item-distribution?merchant_id={merchant_id}")
+    response = client.get(
+        f"/finance/merchant/monthly-item-distribution?merchant_id={merchant_id}"
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1

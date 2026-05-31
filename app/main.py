@@ -1,10 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from typing import List
-from . import models, schemas, database
 from .routers import merchant, staff, finance
-from .database_init import init_db
 
 from contextlib import asynccontextmanager
 
@@ -19,15 +15,23 @@ app = FastAPI(title="KubeEats Finance Microservice", lifespan=lifespan)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, replace with specific origins
+    allow_origins=["*"],  # In production, replace with specific origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(merchant.router, prefix="/api/merchant", tags=["merchant"])
-app.include_router(staff.router, prefix="/api/staff", tags=["staff"])
-app.include_router(finance.router, prefix="/api/finance", tags=["finance"])
+app.include_router(merchant.router, prefix="/finance/merchant", tags=["finance"])
+app.include_router(staff.router, prefix="/finance/staff", tags=["finance"])
+app.include_router(finance.router, prefix="/finance", tags=["finance"])
+
+# Deprecated compatibility aliases. Public LB routes must use /finance/*.
+app.include_router(
+    finance.router,
+    prefix="/api/finance",
+    tags=["finance-deprecated"],
+    deprecated=True,
+)
 
 @app.get("/")
 def read_root():
@@ -36,3 +40,8 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+@app.get("/finance/health")
+def finance_health_check():
+    return health_check()
