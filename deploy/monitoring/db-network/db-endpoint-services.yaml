@@ -16,8 +16,8 @@ spec:
       port: 8008
       targetPort: 8008
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: patroni-pg1
   labels:
@@ -27,12 +27,17 @@ metadata:
     cluster: kubereats-postgres
     component: postgres-ha
     node: pg1
-subsets:
+    kubernetes.io/service-name: patroni-pg1
+addressType: IPv4
+ports:
+  - name: http
+    protocol: TCP
+    port: 8008
+endpoints:
   - addresses:
-      - ip: 192.168.16.221
-    ports:
-      - name: http
-        port: 8008
+      - 192.168.16.221
+    conditions:
+      ready: true
 ---
 apiVersion: v1
 kind: Service
@@ -52,8 +57,8 @@ spec:
       port: 8008
       targetPort: 8008
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: patroni-pg2
   labels:
@@ -63,12 +68,17 @@ metadata:
     cluster: kubereats-postgres
     component: postgres-ha
     node: pg2
-subsets:
+    kubernetes.io/service-name: patroni-pg2
+addressType: IPv4
+ports:
+  - name: http
+    protocol: TCP
+    port: 8008
+endpoints:
   - addresses:
-      - ip: 192.168.16.222
-    ports:
-      - name: http
-        port: 8008
+      - 192.168.16.222
+    conditions:
+      ready: true
 ---
 apiVersion: v1
 kind: Service
@@ -88,8 +98,8 @@ spec:
       port: 8008
       targetPort: 8008
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: patroni-pg3
   labels:
@@ -99,12 +109,17 @@ metadata:
     cluster: kubereats-postgres
     component: postgres-ha
     node: pg3
-subsets:
+    kubernetes.io/service-name: patroni-pg3
+addressType: IPv4
+ports:
+  - name: http
+    protocol: TCP
+    port: 8008
+endpoints:
   - addresses:
-      - ip: 10.250.0.3
-    ports:
-      - name: http
-        port: 8008
+      - 10.250.0.3
+    conditions:
+      ready: true
 ---
 apiVersion: v1
 kind: Service
@@ -124,8 +139,8 @@ spec:
       port: 9187
       targetPort: 9187
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: postgres-exporter-pg1
   labels:
@@ -135,12 +150,17 @@ metadata:
     cluster: kubereats-postgres
     component: postgres-exporter
     node: pg1
-subsets:
+    kubernetes.io/service-name: postgres-exporter-pg1
+addressType: IPv4
+ports:
+  - name: metrics
+    protocol: TCP
+    port: 9187
+endpoints:
   - addresses:
-      - ip: 192.168.16.221
-    ports:
-      - name: metrics
-        port: 9187
+      - 192.168.16.221
+    conditions:
+      ready: true
 ---
 apiVersion: v1
 kind: Service
@@ -160,8 +180,8 @@ spec:
       port: 9187
       targetPort: 9187
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: postgres-exporter-pg2
   labels:
@@ -171,12 +191,17 @@ metadata:
     cluster: kubereats-postgres
     component: postgres-exporter
     node: pg2
-subsets:
+    kubernetes.io/service-name: postgres-exporter-pg2
+addressType: IPv4
+ports:
+  - name: metrics
+    protocol: TCP
+    port: 9187
+endpoints:
   - addresses:
-      - ip: 192.168.16.222
-    ports:
-      - name: metrics
-        port: 9187
+      - 192.168.16.222
+    conditions:
+      ready: true
 ---
 apiVersion: v1
 kind: Service
@@ -196,8 +221,8 @@ spec:
       port: 9187
       targetPort: 9187
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: postgres-exporter-pg3
   labels:
@@ -207,12 +232,17 @@ metadata:
     cluster: kubereats-postgres
     component: postgres-exporter
     node: pg3
-subsets:
+    kubernetes.io/service-name: postgres-exporter-pg3
+addressType: IPv4
+ports:
+  - name: metrics
+    protocol: TCP
+    port: 9187
+endpoints:
   - addresses:
-      - ip: 10.250.0.3
-    ports:
-      - name: metrics
-        port: 9187
+      - 10.250.0.3
+    conditions:
+      ready: true
 ---
 apiVersion: v1
 kind: Service
@@ -232,8 +262,8 @@ spec:
       port: 9100
       targetPort: 9100
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: db-node-exporter-pg1
   labels:
@@ -243,12 +273,17 @@ metadata:
     cluster: kubereats-postgres
     component: db-node-exporter
     node: pg1
-subsets:
+    kubernetes.io/service-name: db-node-exporter-pg1
+addressType: IPv4
+ports:
+  - name: metrics
+    protocol: TCP
+    port: 9100
+endpoints:
   - addresses:
-      - ip: 192.168.16.221
-    ports:
-      - name: metrics
-        port: 9100
+      - 192.168.16.221
+    conditions:
+      ready: true
 ---
 apiVersion: v1
 kind: Service
@@ -268,8 +303,8 @@ spec:
       port: 9100
       targetPort: 9100
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: db-node-exporter-pg2
   labels:
@@ -279,12 +314,17 @@ metadata:
     cluster: kubereats-postgres
     component: db-node-exporter
     node: pg2
-subsets:
+    kubernetes.io/service-name: db-node-exporter-pg2
+addressType: IPv4
+ports:
+  - name: metrics
+    protocol: TCP
+    port: 9100
+endpoints:
   - addresses:
-      - ip: 192.168.16.222
-    ports:
-      - name: metrics
-        port: 9100
+      - 192.168.16.222
+    conditions:
+      ready: true
 ---
 apiVersion: v1
 kind: Service
@@ -304,8 +344,8 @@ spec:
       port: 9100
       targetPort: 9100
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
   name: db-node-exporter-pg3
   labels:
@@ -315,9 +355,14 @@ metadata:
     cluster: kubereats-postgres
     component: db-node-exporter
     node: pg3
-subsets:
+    kubernetes.io/service-name: db-node-exporter-pg3
+addressType: IPv4
+ports:
+  - name: metrics
+    protocol: TCP
+    port: 9100
+endpoints:
   - addresses:
-      - ip: 10.250.0.3
-    ports:
-      - name: metrics
-        port: 9100
+      - 10.250.0.3
+    conditions:
+      ready: true
