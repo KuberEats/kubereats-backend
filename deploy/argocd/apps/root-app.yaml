@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: git@github.com:KuberEats/kubereats-backend.git
+    repoURL: https://github.com/KuberEats/kubereats-backend.git
     targetRevision: main
     path: deploy/argocd/apps
     directory:

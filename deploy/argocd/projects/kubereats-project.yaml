@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Kubereats GitOps project
   sourceRepos:
-    - git@github.com:KuberEats/kubereats-backend.git
+    - https://github.com/KuberEats/kubereats-backend.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: kubereats-dev
