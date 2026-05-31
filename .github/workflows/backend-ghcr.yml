@@ -220,18 +220,18 @@ jobs:
           fi
           echo "ref=${gitops_ref}" >> "$GITHUB_OUTPUT"
 
+      - name: Checkout GitOps branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.gitops-ref.outputs.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download image tag metadata
         uses: actions/download-artifact@v4
         with:
           pattern: image-tag-*
           merge-multiple: true
           path: image-tags
-
-      - name: Checkout GitOps branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.gitops-ref.outputs.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update dev image tags
         id: tags
