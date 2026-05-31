@@ -5,10 +5,13 @@ resources:
   - namespace.yaml
   - merchant-service
   - committee-service
-  - notification-service
-  - finance-service
-  - order-scheduler-service
-  - recommendation-service
-  - tagging-service
   - verification-service
+# Phase 1 only deploys the core backend services above.
+# Keep these services out of dev sync until their images, secrets, and dependencies are ready:
+# - notification-service
+# - finance-service
+# - order-scheduler-service
+# - recommendation-service
+# - tagging-service
+# - employee-order
 # ingress.example.yaml is optional and intentionally not included.

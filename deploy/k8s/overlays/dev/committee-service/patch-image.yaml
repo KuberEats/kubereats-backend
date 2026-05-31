@@ -7,5 +7,4 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/kubereats/committee-service:dev
           imagePullPolicy: Always

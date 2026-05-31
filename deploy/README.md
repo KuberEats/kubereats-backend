@@ -6,8 +6,9 @@ This directory defines the first-pass on-prem Kubernetes deployment for Kubereat
 
 - Argo CD is installed in `argocd` and syncs this Git repository.
 - Kustomize `base` contains common Deployment, Service, ConfigMap, and secret examples.
-- Kustomize `overlays/dev` deploys to `kubereats-dev` with one replica per service and `:dev` image tags.
+- Kustomize `overlays/dev` currently runs a phase 1 deployment to `kubereats-dev`: `merchant-service`, `committee-service`, and `verification-service` only.
 - Kustomize `overlays/prod` is sample-only until production promotion is explicitly enabled.
+- The remaining backend services stay in `base` and per-service overlays, but are intentionally excluded from phase 1 dev sync until their images, secrets, and external dependencies are ready.
 - CI should build and publish images, then commit image tag changes to Git. CI should not directly run `kubectl apply` against production because Git must remain the auditable desired state and Argo CD must own drift correction and rollback.
 
 ## Repository Inventory
@@ -27,6 +28,60 @@ Current `main` has only repo-level documentation. Backend implementations are in
 | employee-order | `origin/module/employee-order` | missing | missing | TODO | TODO | TODO | TODO | TODO | Not deployable from current repo contents |
 
 Existing GitHub Actions mostly run tests and local Docker builds. Only `module/verification` has a GHCR-style image name in CI; most services still need a publish workflow or registry convention.
+
+## Phase 1 Deployment Scope
+
+`deploy/k8s/overlays/dev/kustomization.yaml` intentionally deploys only:
+
+- `merchant-service`
+- `committee-service`
+- `verification-service`
+
+Temporarily excluded from dev sync:
+
+- `notification-service`
+- `finance-service`
+- `order-scheduler-service`
+- `recommendation-service`
+- `tagging-service`
+- `employee-order`
+
+This keeps the first Argo CD sync focused on validating the GitOps path, image pull, secrets, and health checks without letting services with missing production Dockerfiles or external dependencies degrade the whole app.
+
+## GHCR Image Build And Publish
+
+`.github/workflows/backend-ghcr.yml` builds only the phase 1 services for now:
+
+- `merchant-service` from `module/merchant` -> `ghcr.io/kubereats/merchant-service`
+- `committee-service` from `module/fuwei-system` -> `ghcr.io/kubereats/committee-service`
+- `verification-service` from `module/verification` -> `ghcr.io/kubereats/kubereats-verification`
+
+Pull requests run dependency install, lint, tests, and Docker build checks without pushing images. Pushes to `main`, `infra/*`, or `module/*` build and push both tags:
+
+- `<short-sha>` for immutable GitOps deployment
+- `dev` for fast dev testing
+
+The workflow lowercases the GitHub repository owner before building the image path, so `KuberEats` becomes `kubereats`. After a successful push build, it updates only the phase 1 dev overlay service `kustomization.yaml` image `newTag` to `<short-sha>` and commits:
+
+```text
+chore(gitops): update backend image tags <short-sha> [skip ci]
+```
+
+CI does not run `kubectl apply`; Argo CD remains responsible for sync. For `module/*` pushes, the workflow uses `main` as the GitOps update branch because the service branches are source branches and may not contain `deploy/`.
+
+Confirm package existence in GitHub:
+
+```text
+GitHub repo or org -> Packages -> merchant-service / committee-service / kubereats-verification
+```
+
+Or from a machine with Docker access:
+
+```bash
+docker pull ghcr.io/kubereats/merchant-service:<short-sha>
+docker pull ghcr.io/kubereats/committee-service:<short-sha>
+docker pull ghcr.io/kubereats/kubereats-verification:<short-sha>
+```
 
 ## Prerequisites
 
@@ -85,9 +140,16 @@ ssh -i ~/.ssh/tf-cloud-init kubereats@192.168.17.11   'kubectl apply -f -' < dep
 
 Alternatively, copy the YAML files to the control plane and apply them there.
 
+After the GHCR workflow commits image SHA tags and required secrets exist, let Argo CD sync `kubereats-backend-dev` from the UI or check auto-sync status:
+
+```bash
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get applications -n argocd
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get pods -n kubereats-dev -o wide
+```
+
 ## Create Secrets
 
-Do not commit real secrets. Create each required secret in `kubereats-dev` before expecting pods to become Ready.
+Do not commit real secrets. For phase 1, create only the secrets required by `merchant-service`, `committee-service`, and `verification-service` in `kubereats-dev` before expecting pods to become Ready.
 
 Example:
 
@@ -95,7 +157,36 @@ Example:
 ssh -i ~/.ssh/tf-cloud-init kubereats@192.168.17.11   "kubectl create secret generic merchant-service-secret     -n kubereats-dev     --from-literal=DATABASE_URL='postgresql://...'     --from-literal=JWT_SECRET_KEY='...'     --dry-run=client -o yaml | kubectl apply -f -"
 ```
 
-Repeat for each `deploy/k8s/base/<service>/secret.example.yaml`. Later, replace manual secrets with Sealed Secrets, SOPS, or External Secrets.
+For phase 1, repeat only for `committee-service-secret` and `verification-service-secret`. Create secrets for the other services when they are added to the dev overlay. Later, replace manual secrets with Sealed Secrets, SOPS, or External Secrets.
+
+## GHCR Image Pull Secret
+
+The phase 1 dev overlays do not reference an image pull secret because the repo/packages are public. If GHCR packages are changed to private later, add this to the phase 1 Deployment overlay patches:
+
+```yaml
+imagePullSecrets:
+  - name: ghcr-pull-secret
+```
+
+Then create the secret before syncing, otherwise pods will hit `ImagePullBackOff`. Do not commit GitHub tokens.
+
+SSH to the control plane:
+
+```bash
+ssh -i /home/edtsai/tf-cloud-init kubereats@192.168.17.11
+```
+
+Then run:
+
+```bash
+kubectl create secret docker-registry ghcr-pull-secret \
+  -n kubereats-dev \
+  --docker-server=ghcr.io \
+  --docker-username='<GITHUB_USERNAME>' \
+  --docker-password='<PAT_WITH_READ_PACKAGES>' \
+  --docker-email='<EMAIL>' \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
 
 ## Update Image Tags
 
@@ -152,7 +243,14 @@ If the repo is not on the control plane, stream a rendered manifest from a machi
 
 - SSH key not found: set `SSH_KEY=/path/to/tf-cloud-init`, or place the key at `$HOME/.ssh/tf-cloud-init` or `./tf-cloud-init`.
 - `kubectl` permission denied: on the control plane check `kubectl config current-context`, `~/.kube/config`, `/etc/kubernetes/admin.conf`, and `/etc/rancher/k3s/k3s.yaml`. Fix by granting `kubereats` a valid kubeconfig rather than overwriting cluster state.
-- `ImagePullBackOff`: confirm the image tag exists, GHCR auth is configured if private, and any `imagePullSecrets` are present.
+- `ImagePullBackOff`: confirm the image tag exists, GHCR auth is configured if private, and `ghcr-pull-secret` is present. Useful commands:
+
+```bash
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get pods -n kubereats-dev -o wide
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh describe pod <pod-name> -n kubereats-dev
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get secret ghcr-pull-secret -n kubereats-dev
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get events -n kubereats-dev --sort-by=.lastTimestamp
+```
 - `CrashLoopBackOff`: inspect env, DB connectivity, startup migrations, and logs.
 - DB connection failed: verify `DATABASE_URL`, network route, DB firewall, SSL mode, and credentials.
 - Argo CD `OutOfSync`: check repo URL, branch, path, Kustomize render errors, and project permissions.
@@ -164,7 +262,7 @@ If the repo is not on the control plane, stream a rendered manifest from a machi
 
 ## Next Steps
 
-- Add GHCR publish workflows and image tags for every module branch.
+- Phase in remaining services one at a time: add or harden production Dockerfile, publish GHCR image, add required external dependency secrets, include the service in `deploy/k8s/overlays/dev/kustomization.yaml`, then validate Argo CD health before moving to the next service. Suggested order: notification, finance, tagging, order-scheduler, recommendation.
 - Add `imagePullSecrets` if GHCR images are private.
 - Replace manual secrets with External Secrets, Sealed Secrets, or SOPS.
 - Split notification worker into its own Deployment if async email delivery is required now.

@@ -7,5 +7,4 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/kubereats/merchant-service:dev
           imagePullPolicy: Always

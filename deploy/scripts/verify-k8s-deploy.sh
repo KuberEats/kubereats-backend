@@ -74,11 +74,6 @@ health_failed=0
 services=(
   "merchant-service:/health/live"
   "committee-service:/health/live"
-  "notification-service:/health/live"
-  "finance-service:/health"
-  "order-scheduler-service:/health"
-  "recommendation-service:/health"
-  "tagging-service:/health"
   "verification-service:/healthz"
 )
 
