@@ -50,7 +50,7 @@ def setup_logging(level: int = logging.INFO) -> None:
     root.addHandler(handler)
 
     # Reduce noise from libraries that log at INFO by default
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.access").setLevel(logging.INFO)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 
