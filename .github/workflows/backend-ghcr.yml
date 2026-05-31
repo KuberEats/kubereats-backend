@@ -33,11 +33,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          all_services='[
-            {"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service"},
-            {"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service"},
-            {"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service"}
-          ]'
+          all_services='[{"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service"},{"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service"},{"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service"}]'
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             ref="${{ github.head_ref }}"
