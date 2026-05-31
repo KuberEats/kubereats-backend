@@ -9,4 +9,4 @@ patches:
   - path: patch-image.yaml
 images:
   - name: ghcr.io/kubereats/merchant-service
-    newTag: 1ada811
+    newTag: aad9dd2

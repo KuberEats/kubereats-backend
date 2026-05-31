@@ -9,4 +9,4 @@ patches:
   - path: patch-image.yaml
 images:
   - name: ghcr.io/kubereats/kubereats-verification
-    newTag: 1ada811
+    newTag: aad9dd2
