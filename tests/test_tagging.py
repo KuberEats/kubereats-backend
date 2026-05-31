@@ -1,6 +1,18 @@
 import pytest
+from app.main import app
 from app.services.tagging import TaggingService, MerchantService, StaffService
 from app.models import UserInfo, Order, Tag, Finance, MerchantInfo
+
+
+def test_public_tagging_routes_are_registered():
+    routes = {route.path for route in app.routes}
+
+    assert "/health" in routes
+    assert "/tagging/health" in routes
+    assert "/tagging/user/{user_id}" in routes
+    assert "/tagging/generate-barcode/{user_id}" in routes
+    assert "/api/tagging/user/{user_id}" in routes
+    assert "/api/tagging/generate-barcode/{user_id}" in routes
 
 def test_get_tags_by_user_id(db_session):
     # Setup
