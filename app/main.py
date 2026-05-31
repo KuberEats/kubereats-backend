@@ -48,7 +48,7 @@ def read_root():
     return {"message": "KubeEats Tagging Service is running"}
 
 
-@app.get("/tagging/health")
+@app.get("/tagging/health", deprecated=True)
 def tagging_health_check(db: Session = Depends(get_db)):
     return health_check(db)
 
@@ -108,7 +108,8 @@ def generate_report(merchant_id: int, db: Session = Depends(get_db)):
     return {"message": f"Report generation triggered for merchant {merchant_id}"}
 
 
-@app.get("/tagging/user/{user_id}")
+@app.get("/user/{user_id}")
+@app.get("/tagging/user/{user_id}", deprecated=True)
 @app.get("/api/tagging/user/{user_id}", deprecated=True)
 def get_user_tags(user_id: int, db: Session = Depends(get_db)):
     service = TaggingService(db)
@@ -118,7 +119,8 @@ def get_user_tags(user_id: int, db: Session = Depends(get_db)):
     return {"user_id": user_id, "tags": tags}
 
 
-@app.post("/tagging/generate-barcode/{user_id}")
+@app.post("/generate-barcode/{user_id}")
+@app.post("/tagging/generate-barcode/{user_id}", deprecated=True)
 @app.post("/api/tagging/generate-barcode/{user_id}", deprecated=True)
 def generate_staff_barcode(user_id: int, db: Session = Depends(get_db)):
     user = db.query(UserInfo).filter(UserInfo.id == user_id).first()

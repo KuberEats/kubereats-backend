@@ -8,6 +8,8 @@ def test_public_tagging_routes_are_registered():
     routes = {route.path for route in app.routes}
 
     assert "/health" in routes
+    assert "/user/{user_id}" in routes
+    assert "/generate-barcode/{user_id}" in routes
     assert "/tagging/health" in routes
     assert "/tagging/user/{user_id}" in routes
     assert "/tagging/generate-barcode/{user_id}" in routes

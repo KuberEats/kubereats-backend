@@ -4,7 +4,16 @@
 
 The GCP Load Balancer public prefix for this service is `/tagging`.
 
-Canonical routes:
+Canonical service-internal routes, assuming the GCP Load Balancer strips the
+`/tagging` service prefix before forwarding:
+
+```text
+GET  /health
+GET  /user/{user_id}
+POST /generate-barcode/{user_id}
+```
+
+Public LB routes remain:
 
 ```text
 GET  /tagging/health
@@ -12,7 +21,9 @@ GET  /tagging/user/{user_id}
 POST /tagging/generate-barcode/{user_id}
 ```
 
-`/health` remains available for Kubernetes liveness/readiness probes.
+The backend also keeps `/tagging/*` aliases temporarily for environments that
+forward paths without stripping the service prefix. `/health` remains available
+for Kubernetes liveness/readiness probes.
 
 Deprecated compatibility aliases:
 
