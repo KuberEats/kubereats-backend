@@ -7,6 +7,7 @@ spec:
   description: Kubereats GitOps project
   sourceRepos:
     - https://github.com/KuberEats/kubereats-backend.git
+    - https://github.com/KuberEats/kubereats-IaC.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: kubereats-dev

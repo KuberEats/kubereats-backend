@@ -127,7 +127,7 @@ docker pull ghcr.io/kubereats/kubereats-verification:<short-sha>
 - SSH private key `tf-cloud-init` available via `SSH_KEY`, `$HOME/.ssh/tf-cloud-init`, or `./tf-cloud-init`.
 - `kubectl` works on the control plane for user `kubereats`.
 - The cluster can pull the chosen GHCR images.
-- External PostgreSQL/Patroni/VM DB connection strings are ready.
+- The shared DB Secret points to the Kubernetes ClusterIP Service `kubereats-postgres`, not directly to DB VM IPs.
 - External Redis/RabbitMQ/OpenRouter/SMTP credentials are ready where required.
 
 ## Bootstrap Argo CD
@@ -186,12 +186,18 @@ SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get pods -
 
 ## Create Secrets
 
-Do not commit real secrets. For phase 1, create only the secrets required by `merchant-service`, `committee-service`, and `verification-service` in `kubereats-dev` before expecting pods to become Ready.
+Do not commit real secrets. Create `kubereats-db-app` first, then create service-specific secrets for non-DB values.
+
+```bash
+ssh -i ~/.ssh/tf-cloud-init kubereats@192.168.17.11   "kubectl create secret generic kubereats-db-app     -n kubereats-dev     --from-literal=DATABASE_URL='postgresql://kubereats_app:<password>@kubereats-postgres:5432/kubereats'     --dry-run=client -o yaml | kubectl apply -f -"
+```
+
+For phase 1, create only the secrets required by `merchant-service`, `committee-service`, and `verification-service` in `kubereats-dev` before expecting pods to become Ready.
 
 Example:
 
 ```bash
-ssh -i ~/.ssh/tf-cloud-init kubereats@192.168.17.11   "kubectl create secret generic merchant-service-secret     -n kubereats-dev     --from-literal=DATABASE_URL='postgresql://...'     --from-literal=JWT_SECRET_KEY='...'     --dry-run=client -o yaml | kubectl apply -f -"
+ssh -i ~/.ssh/tf-cloud-init kubereats@192.168.17.11   "kubectl create secret generic merchant-service-secret     -n kubereats-dev     --from-literal=JWT_SECRET_KEY='...'     --dry-run=client -o yaml | kubectl apply -f -"
 ```
 
 For phase 1, repeat only for `committee-service-secret` and `verification-service-secret`. Create secrets for the other services when they are added to the dev overlay. Later, replace manual secrets with Sealed Secrets, SOPS, or External Secrets.
