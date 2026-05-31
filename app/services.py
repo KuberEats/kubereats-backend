@@ -49,6 +49,40 @@ class MerchantFinanceService:
         
         return {"monthly_total": total, "month": now.month, "year": now.year}
 
+    @staticmethod
+    def get_monthly_item_distribution(db: Session, merchant_id: int):
+        now = datetime.now()
+        month_start = datetime(now.year, now.month, 1)
+        
+        # Query items for this merchant in finished orders this month
+        items_data = db.query(
+            models.Menu.item_name,
+            func.sum(models.OrderItem.subtotal).label("total_amount")
+        ).join(
+            models.OrderItem, models.Menu.id == models.OrderItem.menu_id
+        ).join(
+            models.Order, models.OrderItem.order_id == models.Order.id
+        ).filter(
+            models.Menu.merchant_id == merchant_id,
+            models.Order.order_status == 1, # Finished
+            models.Order.order_time >= month_start
+        ).group_by(
+            models.Menu.item_name
+        ).all()
+        
+        total_revenue = sum(item.total_amount for item in items_data) or Decimal("1") # Avoid division by zero
+        
+        results = []
+        for item in items_data:
+            percentage = (float(item.total_amount) / float(total_revenue)) * 100
+            results.append({
+                "itemName": item.item_name,
+                "totalAmount": float(item.total_amount),
+                "percentage": round(percentage, 1)
+            })
+            
+        return results
+
 class StaffFinanceService:
     @staticmethod
     def get_expenses(db: Session, user_id: int):

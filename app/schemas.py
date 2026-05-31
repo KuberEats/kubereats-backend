@@ -75,3 +75,8 @@ class MerchantRecord(MerchantBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class MonthlyItemDistribution(BaseModel):
+    itemName: str
+    totalAmount: float
+    percentage: float

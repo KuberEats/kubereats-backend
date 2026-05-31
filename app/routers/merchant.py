@@ -17,3 +17,7 @@ def get_payouts(merchant_id: int, db: Session = Depends(database.get_db)):
 @router.get("/monthly-total")
 def get_monthly_total(merchant_id: int, db: Session = Depends(database.get_db)):
     return MerchantFinanceService.get_monthly_total(db, merchant_id)
+
+@router.get("/monthly-item-distribution", response_model=list[schemas.MonthlyItemDistribution])
+def get_monthly_item_distribution(merchant_id: int, db: Session = Depends(database.get_db)):
+    return MerchantFinanceService.get_monthly_item_distribution(db, merchant_id)
