@@ -161,14 +161,16 @@ For phase 1, repeat only for `committee-service-secret` and `verification-servic
 
 ## GHCR Image Pull Secret
 
-The phase 1 dev overlays do not reference an image pull secret because the repo/packages are public. If GHCR packages are changed to private later, add this to the phase 1 Deployment overlay patches:
+The phase 1 dev overlays do not reference an image pull secret by default. A public GitHub repository is not enough for anonymous Kubernetes pulls: each GHCR package must also be public. The workflow attempts to set package visibility to public after pushing images, but organization/package permissions may still require setting this manually in GitHub Packages.
+
+If pods show `401 Unauthorized` while pulling from `ghcr.io`, either set these packages to public in GitHub Packages or add this to the phase 1 Deployment overlay patches:
 
 ```yaml
 imagePullSecrets:
   - name: ghcr-pull-secret
 ```
 
-Then create the secret before syncing, otherwise pods will hit `ImagePullBackOff`. Do not commit GitHub tokens.
+Then create the secret before syncing. Do not commit GitHub tokens.
 
 SSH to the control plane:
 
