@@ -6,9 +6,9 @@ This directory defines the first-pass on-prem Kubernetes deployment for Kubereat
 
 - Argo CD is installed in `argocd` and syncs this Git repository.
 - Kustomize `base` contains common Deployment, Service, ConfigMap, and secret examples.
-- Kustomize `overlays/dev` currently runs a phase 1 deployment to `kubereats-dev`: `merchant-service`, `committee-service`, and `verification-service` only.
+- Kustomize `overlays/dev` currently runs the phase 1 services plus Phase 2a in `kubereats-dev`: `merchant-service`, `committee-service`, `verification-service`, `tagging-service`, and `finance-service`.
 - Kustomize `overlays/prod` is sample-only until production promotion is explicitly enabled.
-- The remaining backend services stay in `base` and per-service overlays, but are intentionally excluded from phase 1 dev sync until their images, secrets, and external dependencies are ready.
+- The remaining backend services stay in `base` and per-service overlays, but are intentionally excluded from dev sync until their images, secrets, and external dependencies are ready.
 - CI should build and publish images, then commit image tag changes to Git. CI should not directly run `kubectl apply` against production because Git must remain the auditable desired state and Argo CD must own drift correction and rollback.
 
 ## Repository Inventory
@@ -20,33 +20,53 @@ Current `main` has only repo-level documentation. Backend implementations are in
 | merchant-service | `origin/module/merchant` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health/live`, `/health/ready` | 8000 | `ghcr.io/kubereats/merchant-service:dev` TODO publish | `uv run python scripts/migrate.py && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `DATABASE_URL`, `JWT_SECRET_KEY` | Manifest-ready; image registry/tag and secret required |
 | committee-service | `origin/module/fuwei-system` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health/live`, `/health/ready` | 8000 | `ghcr.io/kubereats/committee-service:dev` TODO publish | `uv run python scripts/migrate.py && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `DATABASE_URL`, `JWT_SECRET_KEY` | Manifest-ready; image registry/tag and secret required |
 | notification-service | `origin/module/notification` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health/live`, `/health/ready` | 8000 | `ghcr.io/kubereats/notification-service:dev` TODO publish | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `DATABASE_URL`, `REDIS_URL`, `INTERNAL_SERVICE_TOKENS` | API manifest-ready; worker deployment TODO |
-| finance-service | `origin/module/finance` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health` | 8000 | `ghcr.io/kubereats/finance-service:dev` TODO publish | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | `DATABASE_URL`, `REDIS_URL` | Manifest-ready; image registry/tag and secret required |
+| finance-service | `origin/module/finance` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health` | 8000 | `ghcr.io/kubereats/finance-service:dev` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | `kubereats-db-app/DATABASE_URL` | Phase 2a dev overlay enabled |
 | order-scheduler-service | `origin/module/order-scheduler` | `Dockerfile.dev` only | `pyproject.toml`, `uv.lock`, `package.json` | `/health` | 8000 | `ghcr.io/kubereats/order-scheduler-service:dev` TODO publish | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` | `DATABASE_URL`, `RABBITMQ_URL`, `INTERNAL_TASK_TOKEN` | Needs production Dockerfile or approved dev image |
 | recommendation-service | `origin/module/recommend` | `Dockerfile.dev` only | `pyproject.toml`, `uv.lock`, `package.json` | `/health` | 8000 | `ghcr.io/kubereats/recommendation-service:dev` TODO publish | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` | `DATABASE_URL`, `OPENROUTER_API_KEY` | Needs production Dockerfile or approved dev image |
-| tagging-service | `origin/module/tagging` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health` | 8000 | `ghcr.io/kubereats/tagging-service:dev` TODO publish | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `DATABASE_URL`, `REDIS_URL` | Manifest-ready; image registry/tag and secret required |
+| tagging-service | `origin/module/tagging` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health` | 8000 | `ghcr.io/kubereats/tagging-service:dev` | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `kubereats-db-app/DATABASE_URL` | Phase 2a dev overlay enabled |
 | verification-service | `origin/module/verification` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/healthz`, `/readyz`, `/health/live`, `/health/ready` | 8000 | `ghcr.io/kubereats/kubereats-verification:dev` TODO publish | `python scripts/migrate.py && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}` | `DATABASE_URL`, `JWT_SECRET_KEY`, optional SMTP/Mailgun values | Manifest-ready; image registry/tag and secret required |
 | employee-order | `origin/module/employee-order` | missing | missing | TODO | TODO | TODO | TODO | TODO | Not deployable from current repo contents |
 
-Existing GitHub Actions mostly run tests and local Docker builds. Only `module/verification` has a GHCR-style image name in CI; most services still need a publish workflow or registry convention.
+GitHub Actions build and publish GHCR images for the phase 1 services and Phase 2a services.
 
 ## Phase 1 Deployment Scope
 
-`deploy/k8s/overlays/dev/kustomization.yaml` intentionally deploys only:
+Phase 1 deployed:
 
 - `merchant-service`
 - `committee-service`
 - `verification-service`
 
-Temporarily excluded from dev sync:
+After Phase 2a, temporarily excluded from dev sync:
 
 - `notification-service`
-- `finance-service`
 - `order-scheduler-service`
 - `recommendation-service`
-- `tagging-service`
 - `employee-order`
 
 This keeps the first Argo CD sync focused on validating the GitOps path, image pull, secrets, and health checks without letting services with missing production Dockerfiles or external dependencies degrade the whole app.
+
+## Phase 2a Deployment Scope
+
+Phase 2a adds only:
+
+- `tagging-service`
+- `finance-service`
+
+Both services stay internal as `ClusterIP` services in `kubereats-dev`; no new GCP Load Balancer Hybrid NEG or NodePort is added. Both read database configuration from the existing Kubernetes Secret `kubereats-db-app` key `DATABASE_URL`. No per-service secret is required for the Phase 2a API pods.
+
+Still intentionally excluded from dev sync:
+
+- `notification-service`: Redis and worker deployment need a separate phase.
+- `order-scheduler-service`: ownership conflict and active branch work; do not touch in Phase 2a.
+- `recommendation-service`: external API secret and production image readiness need a separate phase.
+- `employee-order`: no deployable service inventory in current repo contents.
+
+Run the Phase 2a smoke test from this repository:
+
+```bash
+SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/smoke-test-phase2a.sh
+```
 
 ## Phase 1.5 - GCP Load Balancer Hybrid NEG Mode
 
@@ -87,18 +107,20 @@ Path rewrite warning: if the GCP URL map forwards `/merchant/health/live` unchan
 
 ## GHCR Image Build And Publish
 
-`.github/workflows/backend-ghcr.yml` builds only the phase 1 services for now:
+`.github/workflows/backend-ghcr.yml` builds the phase 1 services and Phase 2a services:
 
 - `merchant-service` from `module/merchant` -> `ghcr.io/kubereats/merchant-service`
 - `committee-service` from `module/fuwei-system` -> `ghcr.io/kubereats/committee-service`
 - `verification-service` from `module/verification` -> `ghcr.io/kubereats/kubereats-verification`
+- `tagging-service` from `module/tagging` -> `ghcr.io/kubereats/tagging-service`
+- `finance-service` from `module/finance` -> `ghcr.io/kubereats/finance-service`
 
-Pull requests run dependency install, lint, tests, and Docker build checks without pushing images. Pushes to `main`, `infra/*`, or `module/*` build and push both tags:
+Pull requests run dependency install, tests, and Docker build checks without pushing images. Phase 1 services also run the existing lint step. Pushes to `main`, `deploy/*`, `infra/*`, or `module/*` build and push both tags:
 
 - `<short-sha>` for immutable GitOps deployment
 - `dev` for fast dev testing
 
-The workflow lowercases the GitHub repository owner before building the image path, so `KuberEats` becomes `kubereats`. After a successful push build, it updates only the phase 1 dev overlay service `kustomization.yaml` image `newTag` to `<short-sha>` and commits:
+The workflow lowercases the GitHub repository owner before building the image path, so `KuberEats` becomes `kubereats`. After a successful push build, it updates the dev overlay service `kustomization.yaml` image `newTag` to `<short-sha>` and commits:
 
 ```text
 chore(gitops): update backend image tags <short-sha> [skip ci]
@@ -109,7 +131,7 @@ CI does not run `kubectl apply`; Argo CD remains responsible for sync. For `modu
 Confirm package existence in GitHub:
 
 ```text
-GitHub repo or org -> Packages -> merchant-service / committee-service / kubereats-verification
+GitHub repo or org -> Packages -> merchant-service / committee-service / kubereats-verification / tagging-service / finance-service
 ```
 
 Or from a machine with Docker access:
@@ -118,6 +140,8 @@ Or from a machine with Docker access:
 docker pull ghcr.io/kubereats/merchant-service:<short-sha>
 docker pull ghcr.io/kubereats/committee-service:<short-sha>
 docker pull ghcr.io/kubereats/kubereats-verification:<short-sha>
+docker pull ghcr.io/kubereats/tagging-service:<short-sha>
+docker pull ghcr.io/kubereats/finance-service:<short-sha>
 ```
 
 ## Prerequisites
@@ -236,7 +260,7 @@ kubectl create secret docker-registry ghcr-pull-secret \
 ## Update Image Tags
 
 1. Build and push the service image from the relevant module branch.
-2. Update `deploy/k8s/overlays/dev/<service>/patch-image.yaml` with the immutable tag or short SHA.
+2. Update `deploy/k8s/overlays/dev/<service>/kustomization.yaml` image `newTag` with the immutable tag or short SHA.
 3. Commit and push.
 4. Argo CD auto-sync applies the new desired state.
 
@@ -307,7 +331,7 @@ SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get events
 
 ## Next Steps
 
-- Phase in remaining services one at a time: add or harden production Dockerfile, publish GHCR image, add required external dependency secrets, include the service in `deploy/k8s/overlays/dev/kustomization.yaml`, then validate Argo CD health before moving to the next service. Suggested order: notification, finance, tagging, order-scheduler, recommendation.
+- Phase in remaining services one at a time: add or harden production Dockerfile, publish GHCR image, add required external dependency secrets, include the service in `deploy/k8s/overlays/dev/kustomization.yaml`, then validate Argo CD health before moving to the next service. Suggested order after Phase 2a: notification, recommendation, order-scheduler.
 - Add `imagePullSecrets` if GHCR images are private.
 - Replace manual secrets with External Secrets, Sealed Secrets, or SOPS.
 - Split notification worker into its own Deployment if async email delivery is required now.

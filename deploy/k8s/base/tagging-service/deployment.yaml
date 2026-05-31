@@ -19,6 +19,8 @@ spec:
         app.kubernetes.io/part-of: kubereats
         app.kubernetes.io/component: backend
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: api
           image: ghcr.io/kubereats/tagging-service:dev
@@ -35,8 +37,6 @@ spec:
           envFrom:
             - configMapRef:
                 name: tagging-service-config
-            - secretRef:
-                name: tagging-service-secret
           readinessProbe:
             httpGet:
               path: /health
@@ -45,7 +45,7 @@ spec:
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /health
+              path: /
               port: http
             initialDelaySeconds: 10
             periodSeconds: 15
