@@ -10,29 +10,20 @@ import io
 import base64
 import barcode
 from barcode.writer import ImageWriter
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables on startup with retry logic
-    max_retries = 5
-    retry_interval = 5
-    for i in range(max_retries):
-        try:
-            Base.metadata.create_all(bind=engine)
-            print("Database tables created successfully")
-            break
-        except OperationalError as e:
-            if i < max_retries - 1:
-                print(f"Database connection failed, retrying in {retry_interval} seconds... ({i+1}/{max_retries})")
-                time.sleep(retry_interval)
-            else:
-                print("Max retries reached. Database connection failed.")
-                raise e
+    # Check database connection on startup
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+            print("Database connection verified successfully")
+    except Exception as e:
+        print(f"Database connection failed: {e}")
     yield
-
-from sqlalchemy import text
 
 app = FastAPI(title="KubeEats Tagging Service", lifespan=lifespan)
 
@@ -56,66 +47,17 @@ app.add_middleware(
 def read_root():
     return {"message": "KubeEats Tagging Service is running"}
 
-@app.post("/api/seed")
-def seed_data(db: Session = Depends(get_db)):
-    # Create a user for the merchant
-    merchant_user = db.query(UserInfo).filter(UserInfo.username == "merchant_user").first()
-    if not merchant_user:
-        merchant_user = UserInfo(
-            username="merchant_user", 
-            hashed_password="hashed_password", 
-            role="merchant"
-        )
-        db.add(merchant_user)
-        db.flush()
-
-    # Create a merchant
-    merchant = db.query(MerchantInfo).filter(MerchantInfo.merchant_name == "Kube Fried Chicken").first()
-    if not merchant:
-        merchant = MerchantInfo(
-            user_id=merchant_user.id,
-            merchant_name="Kube Fried Chicken", 
-            campus="Main Campus",
-            category="Fast Food",
-            delivery_time="20-30 min",
-            audit_status=1
-        )
-        db.add(merchant)
-        db.flush()
-    
-    # Create a user (staff)
-    user = db.query(UserInfo).filter(UserInfo.username == "staff_001").first()
-    if not user:
-        user = UserInfo(
-            username="staff_001", 
-            hashed_password="hashed_password", 
-            role="staff"
-        )
-        db.add(user)
-        db.flush()
-    
-    # Create some orders
-    for i in range(5):
-        order = Order(user_id=user.id, total_amount=decimal.Decimal("150.00"), order_status=1)
-        db.add(order)
-        db.flush()
-        
-        # Create finance record
-        finance = Finance(
-            merchant_id=merchant.id, 
-            order_id=order.id, 
-            settlement_amount=decimal.Decimal("135.00"), 
-            report_data={"tax": "10%"}
-        )
-        db.add(finance)
-    
-    db.commit()
-    return {"message": "Data seeded successfully"}
-
 @app.get("/api/merchant/income-status")
 def get_merchant_income(merchant_id: int, db: Session = Depends(get_db)):
     service = MerchantService(db)
     return service.get_income_status(merchant_id)
+
+@app.get("/api/merchant/test-connection")
+def test_db_connection(db: Session = Depends(get_db)):
+    merchant = db.query(MerchantInfo).filter(MerchantInfo.id == 1).first()
+    if not merchant:
+        return {"status": "connected", "message": "Connected to DB, but merchant with ID 1 not found."}
+    return {"status": "connected", "merchant_name": merchant.merchant_name}
 
 @app.get("/api/merchant/payouts")
 def get_merchant_payouts(merchant_id: int, db: Session = Depends(get_db)):
