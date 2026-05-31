@@ -9,4 +9,4 @@ patches:
   - path: patch-image.yaml
 images:
   - name: ghcr.io/kubereats/finance-service
-    newTag: 1564dd9
+    newTag: 93f67e9
