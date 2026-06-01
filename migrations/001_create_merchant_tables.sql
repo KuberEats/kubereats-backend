@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS menu (
     item_name           VARCHAR(100)  NOT NULL,
     price               NUMERIC(10,2) NOT NULL,
     max_daily_quantity  INTEGER       NOT NULL DEFAULT 0,
-    image_id            VARCHAR(255),
+    image_url           VARCHAR(255),
     dietary_type        VARCHAR(32)   NOT NULL DEFAULT 'MEAT',
     allergens           JSONB         NOT NULL DEFAULT '[]',
     certifications      JSONB         NOT NULL DEFAULT '[]',

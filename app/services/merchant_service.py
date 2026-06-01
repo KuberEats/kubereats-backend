@@ -113,7 +113,7 @@ class MerchantService:
                 item_name=data.item_name,
                 price=data.price,
                 max_daily_quantity=data.max_daily_quantity,
-                image_id=data.image_id,
+                image_url=data.image_url,
                 dietary_type=data.dietary_type,
                 allergens=data.allergens,
                 certifications=data.certifications,

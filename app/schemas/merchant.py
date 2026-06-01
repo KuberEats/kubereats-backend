@@ -144,9 +144,9 @@ class MenuCreateRequest(BaseModel):
         gt=0,
         validation_alias=AliasChoices("max_daily_quantity", "maxDailyQuantity"),
     )
-    image_id: str | None = Field(
+    image_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("image_id", "imageId"),
+        validation_alias=AliasChoices("image_url", "imageUrl", "image_id", "imageId"),
     )
     dietary_type: DietaryType = Field(
         default="MEAT",
@@ -206,9 +206,9 @@ class MenuUpdateRequest(BaseModel):
         gt=0,
         validation_alias=AliasChoices("max_daily_quantity", "maxDailyQuantity"),
     )
-    image_id: str | None = Field(
+    image_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("image_id", "imageId"),
+        validation_alias=AliasChoices("image_url", "imageUrl", "image_id", "imageId"),
     )
     dietary_type: DietaryType | None = Field(
         default=None,
@@ -262,7 +262,7 @@ class MenuResponse(BaseModel):
     item_name: str = Field(serialization_alias="itemName")
     price: float
     max_daily_quantity: int = Field(serialization_alias="maxDailyQuantity")
-    image_id: str | None = Field(default=None, serialization_alias="imageId")
+    image_url: str | None = Field(default=None, serialization_alias="imageUrl")
     dietary_type: str = Field(serialization_alias="dietaryType")
     allergens: list[str]
     certifications: list[str]
