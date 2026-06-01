@@ -54,3 +54,13 @@ POST /api/finance/generate-report
 ```
 
 Do not expose finance routes under `/api/merchant` or `/api/staff`.
+
+## Grafana expected
+1. status: "ok":
+2. database: "connected":
+3. today_total_settlement (amount): should **not** be decreased
+4. timestamp:
+Example:
+```json
+{"status":"ok","database":"connected","today_total_settlement":0.0,"timestamp":"2026-06-01T08:14:59.829756"}
+```

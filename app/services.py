@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from . import models, schemas
 from decimal import Decimal
 from datetime import datetime
@@ -106,6 +106,36 @@ class StaffFinanceService:
         ).all()
         
         return orders
+
+class MonitoringService:
+    @staticmethod
+    def health_check(db: Session):
+        now = datetime.now()
+        try:
+            # Check DB connection
+            db.execute(text("SELECT 1"))
+            db_status = "connected"
+
+            # Get today's total settlement amount
+            today_start = datetime(now.year, now.month, now.day)
+            today_total = db.query(func.sum(models.Finance.settlement_amount)).filter(
+                models.Finance.created_at >= today_start
+            ).scalar() or Decimal("0")
+
+            return {
+                "status": "ok",
+                "database": db_status,
+                "today_total_settlement": float(today_total),
+                "timestamp": now.isoformat()
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "database": f"disconnected: {str(e)}",
+                "today_total_settlement": 0.0,
+                "timestamp": now.isoformat()
+            }
+
 
 class ReportService:
     @staticmethod
