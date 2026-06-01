@@ -20,6 +20,25 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8.3.4",
+    "pytest-cov>=7.1.0",
     "pytest-mock>=3.14.0",
     "httpx>=0.28.1",
 ]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+relative_files = true
+source = ["app"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
