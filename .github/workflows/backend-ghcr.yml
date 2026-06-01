@@ -1,0 +1,199 @@
+name: Order Scheduler GHCR Image
+
+on:
+  push:
+    branches:
+      - module/order-scheduler
+  pull_request:
+    branches:
+      - module/order-scheduler
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kubereats
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d kubereats"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kubereats
+      KUBEREATS_DB_RESET_MODE: local
+      KUBEREATS_API_BASE_URL: http://localhost:8000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install backend Python dependencies
+        run: uv sync
+
+      - name: Run Python tests
+        run: uv run pytest -q
+
+      - name: Start backend
+        run: |
+          uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
+          echo $! > backend.pid
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..30}; do
+            if curl --fail --silent http://localhost:8000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat backend.log
+          exit 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install backend test dependencies
+        run: npm install
+
+      - name: Run backend API tests
+        run: npm test
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then
+            kill "$(cat backend.pid)" || true
+          fi
+          pkill -f "uvicorn app.main:app" || true
+
+  docker:
+    name: Build and publish image
+    runs-on: ubuntu-latest
+    needs: tests
+    if: github.event_name == 'push'
+    outputs:
+      short_sha: ${{ steps.meta.outputs.short_sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Derive image metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner_lc=$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')
+          short_sha="${GITHUB_SHA:0:7}"
+          image="ghcr.io/${owner_lc}/order-scheduler-service"
+          echo "short_sha=${short_sha}" >> "$GITHUB_OUTPUT"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.dev
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }}
+            ${{ steps.meta.outputs.image }}:dev
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=order-scheduler-service
+          cache-from: type=gha,scope=order-scheduler-service
+          cache-to: type=gha,scope=order-scheduler-service,mode=max
+
+  update-gitops-dev-tag:
+    name: Update dev GitOps image tag
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout GitOps branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update order scheduler dev image tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("deploy/k8s/overlays/dev/order-scheduler-service/kustomization.yaml")
+          short_sha = "${{ needs.docker.outputs.short_sha }}"
+          text = path.read_text()
+
+          if "images:" not in text:
+              text = text.rstrip() + "\nimages:\n  - name: ghcr.io/kubereats/order-scheduler-service\n    newTag: " + short_sha + "\n"
+              path.write_text(text)
+              raise SystemExit(0)
+
+          lines = text.splitlines()
+          out = []
+          in_images = False
+          changed = False
+          for line in lines:
+              stripped = line.strip()
+              if stripped == "images:":
+                  in_images = True
+                  out.append(line)
+                  continue
+              if in_images and stripped.startswith("newTag:"):
+                  indent = line[: len(line) - len(line.lstrip())]
+                  out.append(f"{indent}newTag: {short_sha}")
+                  changed = True
+                  in_images = False
+                  continue
+              out.append(line)
+
+          if not changed:
+              raise SystemExit(f"No images.newTag field updated in {path}")
+
+          path.write_text("\n".join(out) + "\n")
+          PY
+
+      - name: Commit GitOps image tag
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(gitops): update backend image tags order-scheduler-service=${{ needs.docker.outputs.short_sha }} [skip ci]"
+          file_pattern: deploy/k8s/overlays/dev/order-scheduler-service/kustomization.yaml
