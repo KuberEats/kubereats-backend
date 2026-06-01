@@ -33,7 +33,8 @@ def test_readyz_checks_database_connection(health_handlers):
 
 def test_metrics_returns_prometheus_text(health_handlers):
     _, _, metrics = health_handlers
-    body = metrics()
+    response = metrics()
+    body = response.body.decode("utf-8")
 
-    assert "verification_up 1" in body
-    assert "verification_uptime_seconds" in body
+    assert "auth_register_total" in body
+    assert "auth_login_total" in body
