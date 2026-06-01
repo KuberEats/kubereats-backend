@@ -351,7 +351,7 @@ def seed():
                         merchant_id=merchant.id,
                         item_name=item_name,
                         max_daily_quantity=max_daily_quantity,
-                        image_id=f"{item_name}.jpg",
+                        image_url=f"{item_name}.jpg",
                         price=Decimal(price),
                     )
                 )
