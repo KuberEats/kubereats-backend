@@ -10,4 +10,4 @@ patches:
   - path: patch-service-nodeport.yaml
 images:
   - name: ghcr.io/kubereats/recommendation-service
-    newTag: e117afb
+    newTag: 00ef1d1
