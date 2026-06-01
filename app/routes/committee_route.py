@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
+from app.core.metrics import committee_merchant_approved_total, committee_merchant_rejected_total
 from app.database import get_db
 from app.models.kubereats import UserInfo
 from app.repo.committee_repo import CommitteeRepository
@@ -39,7 +40,9 @@ def approve_merchant(
     current_user: UserInfo = Depends(committee_role),
     service: CommitteeService = Depends(get_committee_service),
 ):
-    return service.approve_merchant(merchant_id)
+    result = service.approve_merchant(merchant_id)
+    committee_merchant_approved_total.inc()
+    return result
 
 
 @router.patch("/merchants/{merchant_id}/reject", response_model=AuditResultResponse)
@@ -48,4 +51,6 @@ def reject_merchant(
     current_user: UserInfo = Depends(committee_role),
     service: CommitteeService = Depends(get_committee_service),
 ):
-    return service.reject_merchant(merchant_id)
+    result = service.reject_merchant(merchant_id)
+    committee_merchant_rejected_total.inc()
+    return result
