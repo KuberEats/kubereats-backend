@@ -10,4 +10,4 @@ patches:
   - path: patch-service-nodeport.yaml
 images:
   - name: ghcr.io/kubereats/order-scheduler-service
-    newTag: 9b4ff3c
+    newTag: 881b8eb
