@@ -25,5 +25,6 @@ test = "pytest:console_main"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=9.0.3",
 ]
