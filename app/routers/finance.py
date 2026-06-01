@@ -11,7 +11,13 @@ def report_base_url(request: Request) -> str:
     path = request.url.path.rstrip("/")
     if path.endswith("/generate-report"):
         path = f"{path.removesuffix('/generate-report')}/reports"
-    return f"{str(request.base_url).rstrip('/')}{path}"
+
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    scheme = scheme.split(",", 1)[0].strip()
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    if not host:
+        host = request.url.netloc
+    return f"{scheme}://{host}{path}"
 
 @router.get("/grafanacheck")
 def grafana_check(db: Session = Depends(database.get_db)):

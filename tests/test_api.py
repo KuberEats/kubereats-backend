@@ -158,9 +158,17 @@ def test_generate_report_returns_download_url_without_celery():
     merchant_id = merchant.id
     db.close()
 
-    response = client.post(f"/finance/generate-report?merchant_id={merchant_id}")
+    response = client.post(
+        f"/finance/generate-report?merchant_id={merchant_id}",
+        headers={
+            "x-forwarded-proto": "https",
+            "x-forwarded-host": "api.kubereats.click",
+        },
+    )
 
     assert response.status_code == 200
     data = response.json()
     assert data["filename"].endswith(".pdf")
-    assert f"/finance/reports/{data['filename']}" in data["url"]
+    assert data["url"] == (
+        f"https://api.kubereats.click/finance/reports/{data['filename']}"
+    )
