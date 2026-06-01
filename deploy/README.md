@@ -256,6 +256,26 @@ ssh -i ~/.ssh/tf-cloud-init kubereats@192.168.17.11   "kubectl create secret gen
 
 For phase 1, repeat only for `committee-service-secret` and `verification-service-secret`. Create secrets for the other services when they are added to the dev overlay. Later, replace manual secrets with Sealed Secrets, SOPS, or External Secrets.
 
+## Dev Secret Inventory
+
+Do not decode, print, or commit secret values. This inventory documents names and keys only.
+
+Current deployed dev services read these Kubernetes Secrets:
+
+| Secret | Keys used by deployed manifests | Required now | Current status in `kubereats-dev` | Notes |
+| --- | --- | --- | --- | --- |
+| `kubereats-db-app` | `DATABASE_URL` | Yes | Present | Shared DB URL for all currently deployed backend services. |
+| `ghcr-pull-secret` | `.dockerconfigjson` | Yes | Present | Required for GHCR image pulls where deployments reference `imagePullSecrets`. |
+| `merchant-service-secret` | `JWT_SECRET_KEY` | Yes | Present | Manifest imports the whole Secret through `envFrom`; current cluster Secret also has an extra `DATABASE_URL` key. |
+| `committee-service-secret` | `JWT_SECRET_KEY` | Yes | Present | Manifest imports the whole Secret through `envFrom`; current cluster Secret also has an extra `DATABASE_URL` key. |
+| `verification-service-secret` | `JWT_SECRET_KEY`, optional mail keys if enabled by config | Yes | Present | Example keys include `SMTP_USERNAME`, `SMTP_PASSWORD`, and `MAILGUN_API_KEY`; current dev ConfigMap leaves SMTP/Mailgun disabled. |
+| `recommendation-service-secret` | `OPENROUTER_API_KEY` | No | Missing | Optional in the Deployment. Without it, the service still starts and uses fallback recommendation behavior. |
+| `order-scheduler-service-secret` | `RABBITMQ_URL`, `INTERNAL_TASK_TOKEN` | No | Missing | Optional in the Deployment. Current dev config uses `QUEUE_BACKEND=fake` and `INTERNAL_TASK_AUTH_ENABLED=false`. |
+
+Secret examples exist for `tagging-service-secret` and `finance-service-secret`, but the current deployed manifests do not reference those Secrets. They are not required for the current dev rollout.
+
+`notification-service-secret` is not part of the current dev sync because `notification-service` is still excluded from `deploy/k8s/overlays/dev/kustomization.yaml`.
+
 ## GHCR Image Pull Secret
 
 The phase 1 dev overlays do not reference an image pull secret by default. A public GitHub repository is not enough for anonymous Kubernetes pulls: each GHCR package must also be public. The workflow attempts to set package visibility to public after pushing images, but organization/package permissions may still require setting this manually in GitHub Packages.
