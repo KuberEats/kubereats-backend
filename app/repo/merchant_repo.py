@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import func
+from sqlalchemy import or_, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.kubereats import Menu, MerchantInfo, Order, OrderItem
@@ -18,22 +18,40 @@ class MerchantRepository:
         )
 
     def list_approved_by_campus(self, campus: str) -> list[MerchantInfo]:
+        today = date.today()
         return (
             self.db.query(MerchantInfo)
             .filter(
                 MerchantInfo.campus == campus,
                 MerchantInfo.audit_status == 1,
+                or_(
+                    MerchantInfo.cooperation_start_date.is_(None),
+                    MerchantInfo.cooperation_start_date <= today,
+                ),
+                or_(
+                    MerchantInfo.cooperation_end_date.is_(None),
+                    MerchantInfo.cooperation_end_date >= today,
+                ),
             )
             .all()
         )
 
     def get_approved_by_id(self, merchant_id: int) -> MerchantInfo | None:
+        today = date.today()
         return (
             self.db.query(MerchantInfo)
             .options(joinedload(MerchantInfo.menus))
             .filter(
                 MerchantInfo.id == merchant_id,
                 MerchantInfo.audit_status == 1,
+                or_(
+                    MerchantInfo.cooperation_start_date.is_(None),
+                    MerchantInfo.cooperation_start_date <= today,
+                ),
+                or_(
+                    MerchantInfo.cooperation_end_date.is_(None),
+                    MerchantInfo.cooperation_end_date >= today,
+                ),
             )
             .first()
         )

@@ -117,6 +117,14 @@ class MerchantService:
                 dietary_type=data.dietary_type,
                 allergens=data.allergens,
                 certifications=data.certifications,
+                calories_kcal=data.calories_kcal,
+                protein_g=data.protein_g,
+                carbs_g=data.carbs_g,
+                fat_g=data.fat_g,
+                sodium_mg=data.sodium_mg,
+                sugar_g=data.sugar_g,
+                serving_size=data.serving_size,
+                ingredients=data.ingredients,
             )
         )
         self.merchant_repo.commit()
@@ -188,6 +196,17 @@ class MerchantService:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Merchant is not approved yet",
+            )
+        today = date.today()
+        if merchant.cooperation_start_date and merchant.cooperation_start_date > today:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Merchant cooperation period has not started",
+            )
+        if merchant.cooperation_end_date and merchant.cooperation_end_date < today:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Merchant cooperation period has expired",
             )
         return merchant
 

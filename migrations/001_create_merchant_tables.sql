@@ -25,12 +25,28 @@ CREATE TABLE IF NOT EXISTS merchant_info (
     delivery_time       VARCHAR(50)   NOT NULL,
     tags                JSONB         NOT NULL DEFAULT '[]',
     audit_status        INTEGER       NOT NULL DEFAULT 0,
+    cooperation_start_date DATE,
+    cooperation_end_date   DATE,
+    suspended_at           TIMESTAMPTZ,
+    suspension_reason      TEXT,
     created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS ix_merchant_info_user_id      ON merchant_info(user_id);
 CREATE INDEX IF NOT EXISTS ix_merchant_info_audit_status ON merchant_info(audit_status);
+
+ALTER TABLE merchant_info
+    ADD COLUMN IF NOT EXISTS cooperation_start_date DATE;
+
+ALTER TABLE merchant_info
+    ADD COLUMN IF NOT EXISTS cooperation_end_date DATE;
+
+ALTER TABLE merchant_info
+    ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ;
+
+ALTER TABLE merchant_info
+    ADD COLUMN IF NOT EXISTS suspension_reason TEXT;
 
 CREATE TABLE IF NOT EXISTS menu (
     id                  SERIAL PRIMARY KEY,
@@ -42,6 +58,14 @@ CREATE TABLE IF NOT EXISTS menu (
     dietary_type        VARCHAR(32)   NOT NULL DEFAULT 'MEAT',
     allergens           JSONB         NOT NULL DEFAULT '[]',
     certifications      JSONB         NOT NULL DEFAULT '[]',
+    calories_kcal       INTEGER,
+    protein_g           NUMERIC(8,2),
+    carbs_g             NUMERIC(8,2),
+    fat_g               NUMERIC(8,2),
+    sodium_mg           NUMERIC(8,2),
+    sugar_g             NUMERIC(8,2),
+    serving_size        VARCHAR(50),
+    ingredients         TEXT,
     created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
@@ -56,6 +80,30 @@ ALTER TABLE menu
 
 ALTER TABLE menu
     ADD COLUMN IF NOT EXISTS certifications JSONB NOT NULL DEFAULT '[]';
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS calories_kcal INTEGER;
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS protein_g NUMERIC(8,2);
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS carbs_g NUMERIC(8,2);
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS fat_g NUMERIC(8,2);
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS sodium_mg NUMERIC(8,2);
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS sugar_g NUMERIC(8,2);
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS serving_size VARCHAR(50);
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS ingredients TEXT;
 
 CREATE TABLE IF NOT EXISTS orders (
     id           SERIAL PRIMARY KEY,

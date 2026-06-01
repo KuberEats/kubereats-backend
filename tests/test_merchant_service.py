@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -21,6 +21,8 @@ def create_public_merchant(
     rating: Decimal,
     order_count: int,
     audit_status: int = 1,
+    cooperation_start_date=None,
+    cooperation_end_date=None,
 ):
     user = UserInfo(
         username=username,
@@ -44,6 +46,8 @@ def create_public_merchant(
         delivery_time="30 mins",
         tags=["lunch"],
         audit_status=audit_status,
+        cooperation_start_date=cooperation_start_date,
+        cooperation_end_date=cooperation_end_date,
     )
     db.add(merchant)
     db.flush()
@@ -133,6 +137,25 @@ def test_list_public_merchants_filters_approved_by_campus(db, merchant_service):
     assert [merchant.id for merchant in result] == [visible.id]
 
 
+def test_list_public_merchants_excludes_expired_cooperation(db, merchant_service):
+    create_public_merchant(
+        db,
+        "expired",
+        "Expired Shop",
+        "竹科",
+        Decimal("4.5"),
+        10,
+        cooperation_start_date=date.today() - timedelta(days=30),
+        cooperation_end_date=date.today() - timedelta(days=1),
+    )
+
+    result = merchant_service.list_public_merchants(
+        "竹科", target_date=date.today(), sort_by="recommend"
+    )
+
+    assert result == []
+
+
 def test_list_public_merchants_sorts_by_people(db, merchant_service):
     create_public_merchant(db, "people-low", "Low", "竹科", Decimal("5.0"), 3)
     high = create_public_merchant(db, "people-high", "High", "竹科", Decimal("3.0"), 20)
@@ -201,6 +224,14 @@ def test_create_menu_item_success(merchant_service, approved_merchant):
         dietary_type="OVO_LACTO",
         allergens=["蛋", "奶"],
         certifications=["SGS"],
+        calories_kcal=620,
+        protein_g=Decimal("24.5"),
+        carbs_g=Decimal("82.0"),
+        fat_g=Decimal("18.5"),
+        sodium_mg=Decimal("780"),
+        sugar_g=Decimal("6.5"),
+        serving_size="1 份",
+        ingredients="白飯、蛋、青菜",
     )
     result = merchant_service.create_menu_item(approved_merchant.user_id, data)
     assert result.item_name == "Fried Rice"
@@ -208,6 +239,10 @@ def test_create_menu_item_success(merchant_service, approved_merchant):
     assert result.dietary_type == "OVO_LACTO"
     assert result.allergens == ["蛋", "奶"]
     assert result.certifications == ["SGS"]
+    assert result.calories_kcal == 620
+    assert result.protein_g == Decimal("24.5")
+    assert result.serving_size == "1 份"
+    assert result.ingredients == "白飯、蛋、青菜"
 
 
 def test_create_menu_item_not_approved_raises_403(merchant_service, test_merchant):
@@ -218,6 +253,23 @@ def test_create_menu_item_not_approved_raises_403(merchant_service, test_merchan
     )
     with pytest.raises(HTTPException) as exc:
         merchant_service.create_menu_item(test_merchant.user_id, data)
+    assert exc.value.status_code == 403
+
+
+def test_create_menu_item_expired_cooperation_raises_403(
+    merchant_service, approved_merchant
+):
+    approved_merchant.cooperation_start_date = date.today() - timedelta(days=30)
+    approved_merchant.cooperation_end_date = date.today() - timedelta(days=1)
+    data = MenuCreateRequest(
+        item_name="Fried Rice",
+        price=Decimal("80"),
+        max_daily_quantity=15,
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        merchant_service.create_menu_item(approved_merchant.user_id, data)
+
     assert exc.value.status_code == 403
 
 
@@ -233,6 +285,9 @@ def test_update_menu_item_success(merchant_service, approved_merchant, test_menu
         dietary_type="MEAT",
         allergens=["麩質"],
         certifications=["HACCP"],
+        calories_kcal=700,
+        protein_g=Decimal("30"),
+        ingredients="牛肉、麵包",
     )
     result = merchant_service.update_menu_item(
         approved_merchant.user_id, test_menu.id, data
@@ -240,6 +295,9 @@ def test_update_menu_item_success(merchant_service, approved_merchant, test_menu
     assert result.item_name == "Cheeseburger"
     assert result.allergens == ["麩質"]
     assert result.certifications == ["HACCP"]
+    assert result.calories_kcal == 700
+    assert result.protein_g == Decimal("30")
+    assert result.ingredients == "牛肉、麵包"
 
 
 def test_update_menu_item_not_found_raises_404(merchant_service, approved_merchant):

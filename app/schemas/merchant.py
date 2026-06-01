@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -77,6 +77,19 @@ class MerchantResponse(BaseModel):
     delivery_time: str = Field(serialization_alias="deliveryTime")
     tags: list[str]
     audit_status: int = Field(serialization_alias="auditStatus")
+    cooperation_start_date: date | None = Field(
+        default=None,
+        serialization_alias="cooperationStartDate",
+    )
+    cooperation_end_date: date | None = Field(
+        default=None,
+        serialization_alias="cooperationEndDate",
+    )
+    suspended_at: datetime | None = Field(default=None, serialization_alias="suspendedAt")
+    suspension_reason: str | None = Field(
+        default=None,
+        serialization_alias="suspensionReason",
+    )
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
 
@@ -94,11 +107,24 @@ class PublicMerchantListItem(BaseModel):
     max_order_quantity: int = Field(serialization_alias="maxOrderQuantity")
     delivery_time: str = Field(serialization_alias="deliveryTime")
     tags: list[str]
+    cooperation_start_date: date | None = Field(
+        default=None,
+        serialization_alias="cooperationStartDate",
+    )
+    cooperation_end_date: date | None = Field(
+        default=None,
+        serialization_alias="cooperationEndDate",
+    )
 
 
 class PublicMerchantDetail(PublicMerchantListItem):
     user_id: int = Field(serialization_alias="userId")
     audit_status: int = Field(serialization_alias="auditStatus")
+    suspended_at: datetime | None = Field(default=None, serialization_alias="suspendedAt")
+    suspension_reason: str | None = Field(
+        default=None,
+        serialization_alias="suspensionReason",
+    )
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
 
@@ -128,6 +154,42 @@ class MenuCreateRequest(BaseModel):
     )
     allergens: list[str] = Field(default_factory=list)
     certifications: list[str] = Field(default_factory=list)
+    calories_kcal: int | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("calories_kcal", "caloriesKcal"),
+    )
+    protein_g: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("protein_g", "proteinG"),
+    )
+    carbs_g: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("carbs_g", "carbsG"),
+    )
+    fat_g: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("fat_g", "fatG"),
+    )
+    sodium_mg: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("sodium_mg", "sodiumMg"),
+    )
+    sugar_g: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("sugar_g", "sugarG"),
+    )
+    serving_size: str | None = Field(
+        default=None,
+        max_length=50,
+        validation_alias=AliasChoices("serving_size", "servingSize"),
+    )
+    ingredients: str | None = Field(default=None, max_length=1000)
 
 
 class MenuUpdateRequest(BaseModel):
@@ -154,6 +216,42 @@ class MenuUpdateRequest(BaseModel):
     )
     allergens: list[str] | None = None
     certifications: list[str] | None = None
+    calories_kcal: int | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("calories_kcal", "caloriesKcal"),
+    )
+    protein_g: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("protein_g", "proteinG"),
+    )
+    carbs_g: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("carbs_g", "carbsG"),
+    )
+    fat_g: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("fat_g", "fatG"),
+    )
+    sodium_mg: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("sodium_mg", "sodiumMg"),
+    )
+    sugar_g: Decimal | None = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("sugar_g", "sugarG"),
+    )
+    serving_size: str | None = Field(
+        default=None,
+        max_length=50,
+        validation_alias=AliasChoices("serving_size", "servingSize"),
+    )
+    ingredients: str | None = Field(default=None, max_length=1000)
 
 
 class MenuResponse(BaseModel):
@@ -168,6 +266,14 @@ class MenuResponse(BaseModel):
     dietary_type: str = Field(serialization_alias="dietaryType")
     allergens: list[str]
     certifications: list[str]
+    calories_kcal: int | None = Field(default=None, serialization_alias="caloriesKcal")
+    protein_g: float | None = Field(default=None, serialization_alias="proteinG")
+    carbs_g: float | None = Field(default=None, serialization_alias="carbsG")
+    fat_g: float | None = Field(default=None, serialization_alias="fatG")
+    sodium_mg: float | None = Field(default=None, serialization_alias="sodiumMg")
+    sugar_g: float | None = Field(default=None, serialization_alias="sugarG")
+    serving_size: str | None = Field(default=None, serialization_alias="servingSize")
+    ingredients: str | None = None
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
 

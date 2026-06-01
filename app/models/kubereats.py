@@ -1,12 +1,14 @@
 from sqlalchemy import (
     Boolean,
     Column,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
     JSON,
     Numeric,
     String,
+    Text,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -52,6 +54,10 @@ class MerchantInfo(TimestampMixin, Base):
     delivery_time = Column(String(50), nullable=False)
     tags = Column(JSON, default=list, nullable=False)
     audit_status = Column(Integer, default=0, nullable=False)
+    cooperation_start_date = Column(Date, nullable=True)
+    cooperation_end_date = Column(Date, nullable=True)
+    suspended_at = Column(DateTime(timezone=True), nullable=True)
+    suspension_reason = Column(Text, nullable=True)
 
     user = relationship("UserInfo")
     menus = relationship(
@@ -73,6 +79,14 @@ class Menu(TimestampMixin, Base):
     dietary_type = Column(String(32), default="MEAT", nullable=False)
     allergens = Column(JSON, default=list, nullable=False)
     certifications = Column(JSON, default=list, nullable=False)
+    calories_kcal = Column(Integer, nullable=True)
+    protein_g = Column(Numeric(8, 2), nullable=True)
+    carbs_g = Column(Numeric(8, 2), nullable=True)
+    fat_g = Column(Numeric(8, 2), nullable=True)
+    sodium_mg = Column(Numeric(8, 2), nullable=True)
+    sugar_g = Column(Numeric(8, 2), nullable=True)
+    serving_size = Column(String(50), nullable=True)
+    ingredients = Column(Text, nullable=True)
 
     merchant = relationship("MerchantInfo", back_populates="menus")
     order_items = relationship("OrderItem", back_populates="menu")
