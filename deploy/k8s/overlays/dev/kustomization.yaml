@@ -10,9 +10,11 @@ resources:
   - finance-service
   - recommendation-service
   - order-scheduler-service
+  - order-consumer-service
   - sonarqube
 # Recommendation service is exposed in dev on NodePort 31086.
 # Order scheduler service is exposed in dev on NodePort 31087.
+# Order consumer service runs as an internal worker and has no Service.
 # SonarQube UI is exposed in dev on NodePort 31090 for 192.168.16.0/20.
 # Keep these services out of dev sync until their images, secrets, and dependencies are ready:
 # - notification-service

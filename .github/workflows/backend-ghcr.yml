@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          all_services='[{"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service","run_lint":"true","dockerfile":"Dockerfile"},{"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service","run_lint":"true","dockerfile":"Dockerfile"},{"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service","run_lint":"true","dockerfile":"Dockerfile"},{"service":"tagging-service","source_ref":"module/tagging","image_name":"tagging-service","overlay":"tagging-service","run_lint":"false","dockerfile":"Dockerfile"},{"service":"finance-service","source_ref":"module/finance","image_name":"finance-service","overlay":"finance-service","run_lint":"false","dockerfile":"Dockerfile"},{"service":"order-scheduler-service","source_ref":"module/order-scheduler","image_name":"order-scheduler-service","overlay":"order-scheduler-service","run_lint":"false","dockerfile":"Dockerfile.dev"}]'
+          all_services='[{"service":"merchant-service","source_ref":"module/merchant","image_name":"merchant-service","overlay":"merchant-service","run_lint":"true","dockerfile":"Dockerfile"},{"service":"committee-service","source_ref":"module/fuwei-system","image_name":"committee-service","overlay":"committee-service","run_lint":"true","dockerfile":"Dockerfile"},{"service":"verification-service","source_ref":"module/verification","image_name":"kubereats-verification","overlay":"verification-service","run_lint":"true","dockerfile":"Dockerfile"},{"service":"tagging-service","source_ref":"module/tagging","image_name":"tagging-service","overlay":"tagging-service","run_lint":"false","dockerfile":"Dockerfile"},{"service":"finance-service","source_ref":"module/finance","image_name":"finance-service","overlay":"finance-service","run_lint":"false","dockerfile":"Dockerfile"},{"service":"order-scheduler-service","source_ref":"module/order-scheduler","image_name":"order-scheduler-service","overlay":"order-scheduler-service","run_lint":"false","dockerfile":"Dockerfile.dev"},{"service":"order-consumer-service","source_ref":"module/order-consumer","image_name":"order-consumer-service","overlay":"order-consumer-service","run_lint":"false","dockerfile":"Dockerfile.dev"}]'
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             ref="${{ github.head_ref }}"
@@ -60,6 +60,9 @@ jobs:
               ;;
             module/order-scheduler)
               include='[{"service":"order-scheduler-service","source_ref":"module/order-scheduler","image_name":"order-scheduler-service","overlay":"order-scheduler-service","run_lint":"false","dockerfile":"Dockerfile.dev"}]'
+              ;;
+            module/order-consumer)
+              include='[{"service":"order-consumer-service","source_ref":"module/order-consumer","image_name":"order-consumer-service","overlay":"order-consumer-service","run_lint":"false","dockerfile":"Dockerfile.dev"}]'
               ;;
             main|deploy/*|infra/*)
               include="$all_services"
@@ -272,7 +275,8 @@ jobs:
               short_sha = Path(tag_file).read_text().strip()
               path = Path(f"deploy/k8s/overlays/dev/{overlay}/kustomization.yaml")
               if not path.exists():
-                  raise SystemExit(f"Overlay not found for {overlay}: {path}")
+                  print(f"Overlay not found for {overlay}: {path}; skipping GitOps tag update.")
+                  continue
 
               text = path.read_text()
               if "\\n" in text and "\n" not in text:
@@ -301,7 +305,10 @@ jobs:
               path.write_text("\n".join(out) + "\n")
               summaries.append(f"{overlay}={short_sha}")
 
-          summary = ", ".join(summaries)
+          if not summaries:
+              summary = "none"
+          else:
+              summary = ", ".join(summaries)
           Path("tag-summary.txt").write_text(summary + "\n")
           print(summary)
           PY

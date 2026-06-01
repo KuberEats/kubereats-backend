@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-consumer-service-config
+data:
+  APP_ENV: dev
+  LOG_LEVEL: info
+  SERVICE_NAME: order-consumer-service
+  RESERVATION_QUEUE_MODE: db_polling
+  RESERVATION_DB_POLLING_BATCH_SIZE: "25"
+  RESERVATION_PROCESSING_LEASE_SECONDS: "300"
+  ORDER_CONSUMER_POLL_INTERVAL_SECONDS: "2"
