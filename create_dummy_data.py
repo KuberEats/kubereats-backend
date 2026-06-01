@@ -55,49 +55,42 @@ def seed():
             username="admin",
             hashed_password="fake_hashed_password",
             role="admin",
-            history_records="Initial admin user",
         )
 
         staff_user = UserInfo(
             username="staff01",
             hashed_password="fake_hashed_password",
             role="staff",
-            history_records="First staff user",
         )
 
         merchant_user_1 = UserInfo(
             username="merchant01",
             hashed_password="fake_hashed_password",
             role="merchant",
-            history_records="阿明便當 owner",
         )
 
         merchant_user_2 = UserInfo(
             username="merchant02",
             hashed_password="fake_hashed_password",
             role="merchant",
-            history_records="小森咖哩 owner",
         )
 
         merchant_user_3 = UserInfo(
             username="merchant03",
             hashed_password="fake_hashed_password",
             role="merchant",
-            history_records="清爽蔬食盒 owner",
         )
 
         merchant_user_4 = UserInfo(
             username="merchant04",
             hashed_password="fake_hashed_password",
             role="merchant",
-            history_records="南科牛肉麵 owner",
         )
 
         merchant_user_5 = UserInfo(
             username="merchant05",
             hashed_password="fake_hashed_password",
             role="merchant",
-            history_records="中科港式燒臘 owner",
         )
 
         users = [
