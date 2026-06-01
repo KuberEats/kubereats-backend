@@ -64,7 +64,7 @@ service.
 
 ```txt
 User prompt
-  -> POST /recommendations/merchants
+  -> POST /merchants
   -> PromptInterpreter
   -> UserContextRetriever
   -> SqlSearchProvider
@@ -140,15 +140,15 @@ Cloud-ready replacement points:
 Prompt-based endpoints:
 
 ```txt
-POST /recommendations/merchants
-POST /recommendations/menus
+POST /merchants
+POST /menus
 ```
 
 Starter compatibility endpoints:
 
 ```txt
-GET /recommendations/merchants?userId=1&campus=竹科&limit=10
-GET /recommendations/menus?userId=1&campus=竹科&merchantId=1&limit=10
+GET /merchants?userId=1&campus=竹科&limit=10
+GET /menus?userId=1&campus=竹科&merchantId=1&limit=10
 ```
 
 The starter scorer lives in:

@@ -76,7 +76,7 @@ describe('recommendation backend API', () => {
 
   it('recommends merchants from the requested campus with response reasons', async () => {
     const merchants = await postJson<MerchantRecommendation[]>(
-      '/recommendations/merchants',
+      '/merchants',
       {
         userId: 2,
         campus: '竹科',
@@ -103,7 +103,7 @@ describe('recommendation backend API', () => {
   })
 
   it('recommends menus and keeps merchant filters', async () => {
-    const menus = await postJson<MenuRecommendation[]>('/recommendations/menus', {
+    const menus = await postJson<MenuRecommendation[]>('/menus', {
       userId: 2,
       campus: '竹科',
       merchantId: 3,
@@ -127,7 +127,7 @@ describe('recommendation backend API', () => {
 
   it('supports query-style merchant recommendations', async () => {
     const merchants = await getJson<MerchantRecommendation[]>(
-      '/recommendations/merchants?userId=2&campus=%E7%AB%B9%E7%A7%91&limit=2',
+      '/merchants?userId=2&campus=%E7%AB%B9%E7%A7%91&limit=2',
     )
 
     expect(merchants).toHaveLength(2)
@@ -136,7 +136,7 @@ describe('recommendation backend API', () => {
 
   it('returns 404 for unknown users', async () => {
     const body = await getJson<{ detail: string }>(
-      '/recommendations/merchants?userId=999999&limit=1',
+      '/merchants?userId=999999&limit=1',
       { expectedStatus: 404 },
     )
 
@@ -145,7 +145,7 @@ describe('recommendation backend API', () => {
 
   it('rejects invalid recommendation limits', async () => {
     const body = await getJson<{ detail: unknown }>(
-      '/recommendations/merchants?userId=2&limit=0',
+      '/merchants?userId=2&limit=0',
       { expectedStatus: 422 },
     )
 
@@ -153,7 +153,7 @@ describe('recommendation backend API', () => {
   })
 
   it('returns in-memory metrics for Grafana checks', async () => {
-    const metrics = await getJson<GrafanaCheck>('/recommendations/grafana-check')
+    const metrics = await getJson<GrafanaCheck>('/grafana-check')
 
     expect(metrics).toMatchObject({
       service: 'recommendation',
@@ -181,6 +181,6 @@ describe('recommendation backend API', () => {
     expect(metrics.api.successfulRequests).toBeGreaterThanOrEqual(3)
     expect(metrics.api.failedRequests).toBeGreaterThanOrEqual(1)
     expect(metrics.api.averageLatencyMs).toEqual(expect.any(Number))
-    expect(metrics.api.byEndpoint['POST /recommendations/merchants']).toBeDefined()
+    expect(metrics.api.byEndpoint['POST /merchants']).toBeDefined()
   })
 })

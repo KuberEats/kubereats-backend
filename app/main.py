@@ -40,7 +40,7 @@ app.include_router(recommendation_router)
 async def recommendation_metrics_middleware(request, call_next):
     path = request.url.path
 
-    if path not in {"/recommendations/merchants", "/recommendations/menus"}:
+    if path not in {"/merchants", "/menus"}:
         return await call_next(request)
 
     started_at = time.perf_counter()

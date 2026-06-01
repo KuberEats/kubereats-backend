@@ -13,7 +13,7 @@ from app.schemas.recommendation import (
 from app.services.recommendation.metrics import recommendation_metrics
 from app.services.recommendation_service import RecommendationService
 
-router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
+router = APIRouter(tags=["Recommendations"])
 
 
 def get_recommendation_service(db: Session = Depends(get_db)):
