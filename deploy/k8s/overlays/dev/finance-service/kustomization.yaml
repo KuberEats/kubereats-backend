@@ -1,1 +1,13 @@
-apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nnamespace: kubereats-dev\nresources:\n  - ../../../base/finance-service\npatches:\n  - path: patch-env.yaml\n  - path: patch-replicas.yaml\n  - path: patch-image.yaml\n  - path: patch-service-nodeport.yaml\nimages:\n  - name: ghcr.io/kubereats/finance-service\n    newTag: b616e22\n
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kubereats-dev
+resources:
+  - ../../../base/finance-service
+patches:
+  - path: patch-env.yaml
+  - path: patch-replicas.yaml
+  - path: patch-image.yaml
+  - path: patch-service-nodeport.yaml
+images:
+  - name: ghcr.io/kubereats/finance-service
+    newTag: b616e22
