@@ -162,6 +162,7 @@ def test_post_reservation_request_creates_pending_items_and_outbox(session_facto
     try:
         response = service(db).create_reservation_request(payload(quantity=2))
         assert response["status"] == "PENDING_RESERVATION"
+        assert response["reservation_token"] == response["order_token"]
 
         reservation = db.query(ReservationRequest).one()
         assert reservation.status == "PENDING_RESERVATION"
@@ -195,6 +196,7 @@ def test_get_reservation_returns_pending_before_worker_processes_it(db):
     result = service(db).get_reservation_by_token(created["order_token"])
 
     assert result["status"] == "PENDING_RESERVATION"
+    assert result["reservation_token"] == created["order_token"]
     assert result["message"] == "Checking meal availability."
 
 

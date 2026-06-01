@@ -478,6 +478,7 @@ class ReservationService:
     def _serialize_accepted(self, reservation: ReservationRequest):
         return {
             "reservation_id": reservation.id,
+            "reservation_token": reservation.reservation_token,
             "order_token": reservation.reservation_token,
             "status": reservation.status,
             "message": "Reservation request received. Waiting for capacity confirmation.",
@@ -502,6 +503,7 @@ class ReservationService:
         failed_items = items if reservation.status == "SOLD_OUT" else []
         return {
             "reservation_id": reservation.id,
+            "reservation_token": reservation.reservation_token,
             "order_token": reservation.reservation_token,
             "status": reservation.status,
             "service_date": reservation.service_date,

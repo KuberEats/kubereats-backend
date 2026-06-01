@@ -58,6 +58,7 @@ class ReservationResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     reservation_id: int = Field(serialization_alias="reservationId")
+    reservation_token: str = Field(serialization_alias="reservationToken")
     order_token: str = Field(serialization_alias="orderToken")
     status: ReservationStatus
     service_date: date = Field(serialization_alias="serviceDate")
@@ -84,6 +85,7 @@ class ReservationAcceptedResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     reservation_id: int = Field(serialization_alias="reservationId")
+    reservation_token: str = Field(serialization_alias="reservationToken")
     order_token: str = Field(serialization_alias="orderToken")
     status: ReservationStatus
     message: str
