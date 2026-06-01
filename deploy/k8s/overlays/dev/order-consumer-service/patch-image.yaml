@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-consumer-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          imagePullPolicy: Always
