@@ -8,3 +8,6 @@ __pycache__/
 node_modules/
 .DS_Store
 work_flow.sh
+.scannerwork/
+coverage.xml
+.coverage
