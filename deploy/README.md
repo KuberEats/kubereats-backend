@@ -6,7 +6,7 @@ This directory defines the first-pass on-prem Kubernetes deployment for Kubereat
 
 - Argo CD is installed in `argocd` and syncs this Git repository.
 - Kustomize `base` contains common Deployment, Service, ConfigMap, and secret examples.
-- Kustomize `overlays/dev` currently runs the phase 1 services plus Phase 2a in `kubereats-dev`: `merchant-service`, `committee-service`, `verification-service`, `tagging-service`, and `finance-service`.
+- Kustomize `overlays/dev` currently runs the phase 1 services plus `tagging-service`, `finance-service`, and `recommendation-service` in `kubereats-dev`.
 - Kustomize `overlays/prod` is sample-only until production promotion is explicitly enabled.
 - The remaining backend services stay in `base` and per-service overlays, but are intentionally excluded from dev sync until their images, secrets, and external dependencies are ready.
 - CI should build and publish images, then commit image tag changes to Git. CI should not directly run `kubectl apply` against production because Git must remain the auditable desired state and Argo CD must own drift correction and rollback.
@@ -22,7 +22,7 @@ Current `main` has only repo-level documentation. Backend implementations are in
 | notification-service | `origin/module/notification` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health/live`, `/health/ready` | 8000 | `ghcr.io/kubereats/notification-service:dev` TODO publish | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `DATABASE_URL`, `REDIS_URL`, `INTERNAL_SERVICE_TOKENS` | API manifest-ready; worker deployment TODO |
 | finance-service | `origin/module/finance` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health` | 8000 | `ghcr.io/kubereats/finance-service:dev` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | `kubereats-db-app/DATABASE_URL` | Phase 2a dev overlay enabled |
 | order-scheduler-service | `origin/module/order-scheduler` | `Dockerfile.dev` only | `pyproject.toml`, `uv.lock`, `package.json` | `/health` | 8000 | `ghcr.io/kubereats/order-scheduler-service:dev` TODO publish | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` | `DATABASE_URL`, `RABBITMQ_URL`, `INTERNAL_TASK_TOKEN` | Needs production Dockerfile or approved dev image |
-| recommendation-service | `origin/module/recommend` | `Dockerfile.dev` only | `pyproject.toml`, `uv.lock`, `package.json` | `/health` | 8000 | `ghcr.io/kubereats/recommendation-service:dev` TODO publish | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` | `DATABASE_URL`, `OPENROUTER_API_KEY` | Needs production Dockerfile or approved dev image |
+| recommendation-service | `origin/module/recommend` | `Dockerfile.dev` only | `pyproject.toml`, `uv.lock`, `package.json` | `/health` | 8000 | `ghcr.io/kubereats/recommendation-service:6ae09cb` | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` | `kubereats-db-app/DATABASE_URL`, optional `recommendation-service-secret/OPENROUTER_API_KEY` | Dev overlay enabled on NodePort 31086 |
 | tagging-service | `origin/module/tagging` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health` | 8000 | `ghcr.io/kubereats/tagging-service:dev` | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `kubereats-db-app/DATABASE_URL` | Phase 2a dev overlay enabled |
 | verification-service | `origin/module/verification` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/healthz`, `/readyz`, `/health/live`, `/health/ready` | 8000 | `ghcr.io/kubereats/kubereats-verification:dev` TODO publish | `python scripts/migrate.py && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}` | `DATABASE_URL`, `JWT_SECRET_KEY`, optional SMTP/Mailgun values | Manifest-ready; image registry/tag and secret required |
 | employee-order | `origin/module/employee-order` | missing | missing | TODO | TODO | TODO | TODO | TODO | Not deployable from current repo contents |
@@ -37,11 +37,10 @@ Phase 1 deployed:
 - `committee-service`
 - `verification-service`
 
-After Phase 2a, temporarily excluded from dev sync:
+Temporarily excluded from dev sync:
 
 - `notification-service`
 - `order-scheduler-service`
-- `recommendation-service`
 - `employee-order`
 
 This keeps the first Argo CD sync focused on validating the GitOps path, image pull, secrets, and health checks without letting services with missing production Dockerfiles or external dependencies degrade the whole app.
@@ -75,6 +74,16 @@ Run the Phase 2a smoke test from this repository:
 SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/smoke-test-phase2a.sh
 ```
 
+## Recommendation Deployment Scope
+
+`recommendation-service` is deployed from `origin/module/recommend` using the image `ghcr.io/kubereats/recommendation-service:6ae09cb`.
+
+| service | nodePort | health path | public route intent |
+| --- | ---: | --- | --- |
+| `recommendation-service` | `31086` | `/health` | `https://api.kubereats.click/recommendation/*` |
+
+The service reads `DATABASE_URL` from `kubereats-db-app`. `OPENROUTER_API_KEY` may be provided through `recommendation-service-secret`, but that Secret is optional for deployment; without it, the service uses heuristic fallback behavior for recommendation ranking.
+
 ## Phase 1.5 - GCP Load Balancer Hybrid NEG Mode
 
 Dev does not use Kubernetes Ingress in Phase 1.5. Public HTTPS and path routing are handled by the GCP External HTTPS Load Balancer. Kubernetes exposes fixed NodePorts on the worker nodes so GCP Hybrid NEG endpoints can target `WorkerInternalIP:NodePort`.
@@ -90,6 +99,7 @@ Phase 1.5 fixed NodePorts:
 | `verification-service` | `31083` | `/healthz` | `https://api.kubereats.click/verification/*` |
 | `tagging-service` | `31084` | `/health` | `https://api.kubereats.click/tagging/*` |
 | `finance-service` | `31085` | `/health` | `https://api.kubereats.click/finance/*` |
+| `recommendation-service` | `31086` | `/health` | `https://api.kubereats.click/recommendation/*` |
 
 Check Argo CD and services:
 
@@ -340,7 +350,7 @@ SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/remote-kubectl.sh get events
 
 ## Next Steps
 
-- Phase in remaining services one at a time: add or harden production Dockerfile, publish GHCR image, add required external dependency secrets, include the service in `deploy/k8s/overlays/dev/kustomization.yaml`, then validate Argo CD health before moving to the next service. Suggested order after Phase 2a: notification, recommendation, order-scheduler.
+- Phase in remaining services one at a time: add or harden production Dockerfile, publish GHCR image, add required external dependency secrets, include the service in `deploy/k8s/overlays/dev/kustomization.yaml`, then validate Argo CD health before moving to the next service. Suggested order after recommendation: notification, order-scheduler.
 - Add `imagePullSecrets` if GHCR images are private.
 - Replace manual secrets with External Secrets, Sealed Secrets, or SOPS.
 - Split notification worker into its own Deployment if async email delivery is required now.

@@ -7,3 +7,7 @@ patches:
   - path: patch-env.yaml
   - path: patch-replicas.yaml
   - path: patch-image.yaml
+  - path: patch-service-nodeport.yaml
+images:
+  - name: ghcr.io/kubereats/recommendation-service
+    newTag: 6ae09cb

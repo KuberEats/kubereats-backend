@@ -8,10 +8,10 @@ resources:
   - verification-service
   - tagging-service
   - finance-service
-# Phase 2a adds tagging-service and finance-service only.
+  - recommendation-service
+# Recommendation service is exposed in dev on NodePort 31086.
 # Keep these services out of dev sync until their images, secrets, and dependencies are ready:
 # - notification-service
 # - order-scheduler-service
-# - recommendation-service
 # - employee-order
 # ingress.example.yaml is optional and intentionally not included.
