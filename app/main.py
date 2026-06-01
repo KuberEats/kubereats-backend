@@ -35,13 +35,25 @@ app.add_middleware(
 )
 
 app.include_router(recommendation_router)
+app.include_router(
+    recommendation_router,
+    prefix="/recommendations",
+    include_in_schema=False,
+)
+app.include_router(
+    recommendation_router,
+    prefix="/recommendation",
+    include_in_schema=False,
+)
 
 
 @app.middleware("http")
 async def recommendation_metrics_middleware(request, call_next):
     path = request.url.path
+    metrics_path = path.removeprefix("/recommendations")
+    metrics_path = metrics_path.removeprefix("/recommendation")
 
-    if path not in {"/merchants", "/menus"}:
+    if metrics_path not in {"/merchants", "/menus"}:
         return await call_next(request)
 
     started_at = time.perf_counter()
@@ -50,7 +62,7 @@ async def recommendation_metrics_middleware(request, call_next):
         response = await call_next(request)
     except Exception:
         recommendation_metrics.record_api_request(
-            path,
+            metrics_path,
             request.method,
             "error",
             time.perf_counter() - started_at,
@@ -58,7 +70,7 @@ async def recommendation_metrics_middleware(request, call_next):
         raise
 
     recommendation_metrics.record_api_request(
-        path,
+        metrics_path,
         request.method,
         "success" if response.status_code < 400 else "error",
         time.perf_counter() - started_at,
