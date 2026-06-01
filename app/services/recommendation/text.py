@@ -7,9 +7,7 @@ def tokenize(value: str | None):
 
     normalized = value.lower()
     return {
-        token
-        for token in re.split(r"[\s,，、/|;；:：()（）-]+", normalized)
-        if token
+        token for token in re.split(r"[\s,，、/|;；:：()（）-]+", normalized) if token
     }
 
 

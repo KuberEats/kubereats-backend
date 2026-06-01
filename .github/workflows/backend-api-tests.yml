@@ -32,6 +32,8 @@ jobs:
       KUBEREATS_DB_RESET_MODE: local
       BACKEND_API_BASE_URL: http://localhost:8000
       OPENROUTER_API_KEY: ""
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -77,11 +79,18 @@ jobs:
       - name: Install backend test dependencies
         run: npm install
 
+      - name: Run backend quality checks
+        run: npm run quality
+
       - name: Run backend API tests
         run: npm test
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL || 'google/gemini-3.1-flash-lite' }}
+
+      - name: Run SonarScanner
+        if: ${{ env.SONAR_TOKEN != '' }}
+        run: npm run sonar
 
       - name: Stop backend
         if: always()

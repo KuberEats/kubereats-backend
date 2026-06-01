@@ -68,6 +68,8 @@ class TemplateReasonGenerator:
 
         if not reasons:
             merchant = ranked_candidate.candidate.merchant
-            return f"在 {merchant.campus} 評分 {float(merchant.rating):.1f}，整體排序較高"
+            return (
+                f"在 {merchant.campus} 評分 {float(merchant.rating):.1f}，整體排序較高"
+            )
 
         return "，".join(reasons) + "。"

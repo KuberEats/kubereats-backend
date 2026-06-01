@@ -1,9 +1,9 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import text
 
-from app.database import Base, engine, SessionLocal
+from app.database import Base, SessionLocal, engine
 from app.models.kubereats import (
     Finance,
     Menu,
@@ -387,7 +387,7 @@ def seed():
                 user_id=user.id,
                 total_amount=total,
                 order_status=status,
-                order_time=datetime.now(timezone.utc) - timedelta(days=days_ago),
+                order_time=datetime.now(UTC) - timedelta(days=days_ago),
             )
             db.add(order)
             db.commit()

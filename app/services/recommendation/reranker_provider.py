@@ -299,8 +299,7 @@ class HeuristicRerankerProvider:
             "capacityScore",
         ]
         return {
-            key: round(float(signals.get(key, 0)) * heuristic_weight, 2)
-            for key in keys
+            key: round(float(signals.get(key, 0)) * heuristic_weight, 2) for key in keys
         }
 
     def _rerank_query(self, prompt: str, intent):

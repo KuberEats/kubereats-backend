@@ -5,6 +5,9 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .uv-cache/
+.coverage
+coverage.xml
+htmlcov/
 node_modules/
 .DS_Store
 work_flow.sh

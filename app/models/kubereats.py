@@ -1,11 +1,11 @@
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     Date,
     DateTime,
     ForeignKey,
     Integer,
-    JSON,
     Numeric,
     String,
     Table,
@@ -86,7 +86,8 @@ class Menu(TimestampMixin, Base):
     order_items = relationship("OrderItem", back_populates="menu")
 
 
-# Isolated table to track daily capacity of each menu item, separate from Menu to avoid concurrency issues when multiple orders are placed simultaneously.
+# Isolated table for daily menu capacity, separate from Menu to avoid
+# concurrency issues when multiple orders are placed simultaneously.
 class MenuDailyCapacity(TimestampMixin, Base):
     __tablename__ = "menu_daily_capacity"
     __table_args__ = (

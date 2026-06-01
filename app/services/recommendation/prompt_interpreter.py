@@ -250,7 +250,9 @@ class PromptInterpreter:
                 return intent
             except Exception:
                 recommendation_metrics.record_fallback("prompt_interpret")
-                logger.exception("OpenRouter prompt interpretation failed; using fallback")
+                logger.exception(
+                    "OpenRouter prompt interpretation failed; using fallback"
+                )
 
         intent = self._interpret_with_rules(prompt, campus)
         self._log_success("fallback_rules", prompt, campus, intent)

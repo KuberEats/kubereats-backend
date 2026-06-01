@@ -179,6 +179,39 @@ Install dependencies:
 uv sync
 ```
 
+## Quality Checks
+
+Run the backend quality gate:
+
+```sh
+npm run quality
+```
+
+This runs:
+
+- `uv run ruff check .`
+- `uv run ruff format --check .`
+- `uv run pytest`
+
+Useful individual commands:
+
+```sh
+npm run lint:py
+npm run format:py
+npm run test:py
+```
+
+`pytest` writes `coverage.xml`, which is used by SonarScanner.
+
+To publish analysis to SonarQube or SonarCloud, set your Sonar host and token,
+then run the Dockerized scanner:
+
+```sh
+export SONAR_HOST_URL=http://host.docker.internal:9000
+export SONAR_TOKEN=your_sonar_token
+npm run sonar
+```
+
 ## Environment Variables
 
 Create a `.env` file in `kubereats-backend/`.

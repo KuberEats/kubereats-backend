@@ -1,0 +1,11 @@
+services:
+  sonar-scanner:
+    image: sonarsource/sonar-scanner-cli:latest
+    working_dir: /usr/src
+    environment:
+      SONAR_HOST_URL: ${SONAR_HOST_URL:-http://host.docker.internal:9000}
+      SONAR_TOKEN: ${SONAR_TOKEN:?Set SONAR_TOKEN before running SonarScanner}
+    volumes:
+      - .:/usr/src
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

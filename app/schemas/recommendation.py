@@ -37,9 +37,7 @@ class RecommendationIntent(BaseModel):
     avoid: RecommendationAvoidConstraints = Field(
         default_factory=RecommendationAvoidConstraints
     )
-    prefer: RecommendationPreferences = Field(
-        default_factory=RecommendationPreferences
-    )
+    prefer: RecommendationPreferences = Field(default_factory=RecommendationPreferences)
 
 
 class RecommendationRequest(BaseModel):

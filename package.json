@@ -3,7 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "quality": "npm run lint:py && npm run format:py:check && npm run test:py",
+    "lint:py": "uv run ruff check .",
+    "format:py": "uv run ruff format .",
+    "format:py:check": "uv run ruff format --check .",
     "test": "vitest run",
+    "test:api": "vitest run",
+    "test:py": "uv run pytest",
+    "sonar": "docker compose -f docker-compose.sonar.yml run --rm sonar-scanner",
     "test:watch": "vitest"
   },
   "devDependencies": {
