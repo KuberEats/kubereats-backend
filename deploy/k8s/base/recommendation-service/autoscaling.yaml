@@ -1,0 +1,23 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: recommendation-service
+  labels:
+    app.kubernetes.io/name: recommendation-service
+    app.kubernetes.io/part-of: kubereats
+    app.kubernetes.io/component: backend
+spec:
+  scaleTargetRef:
+    name: recommendation-service
+  minReplicaCount: 2
+  maxReplicaCount: 10
+  triggers:
+    - type: prometheus
+      metricType: AverageValue
+      metadata:
+        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+        metricName: recommendation_service_cpu_cores
+        threshold: "0.25"
+        activationThreshold: "0.05"
+        query: |
+          sum(rate(container_cpu_usage_seconds_total{namespace="kubereats-dev", pod=~"recommendation-service-.*", container!="", container!="POD"}[2m])) or on() vector(0)

@@ -1,0 +1,32 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: order-consumer-service
+  labels:
+    app.kubernetes.io/name: order-consumer-service
+    app.kubernetes.io/part-of: kubereats
+    app.kubernetes.io/component: worker
+spec:
+  scaleTargetRef:
+    name: order-consumer-service
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  triggers:
+    - type: prometheus
+      metricType: AverageValue
+      metadata:
+        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+        metricName: order_consumer_reservations_processed_per_second
+        threshold: "2"
+        activationThreshold: "0.2"
+        query: |
+          sum(rate(order_consumer_reservation_processed_total{namespace="kubereats-dev"}[2m])) or on() vector(0)
+    - type: prometheus
+      metricType: AverageValue
+      metadata:
+        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+        metricName: order_consumer_cpu_cores
+        threshold: "0.25"
+        activationThreshold: "0.05"
+        query: |
+          sum(rate(container_cpu_usage_seconds_total{namespace="kubereats-dev", pod=~"order-consumer-service-.*", container!="", container!="POD"}[2m])) or on() vector(0)

@@ -7,4 +7,5 @@ resources:
   - networkpolicy.yaml
   - servicemonitor.yaml
   - prometheusrule.yaml
+  - autoscaling.yaml
 # secret.example.yaml is intentionally not included.

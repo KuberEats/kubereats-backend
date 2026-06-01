@@ -1,0 +1,35 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: merchant-service
+  labels:
+    app.kubernetes.io/name: merchant-service
+    app.kubernetes.io/part-of: kubereats
+    app.kubernetes.io/component: backend
+spec:
+  scaleTargetRef:
+    name: merchant-service
+  minReplicaCount: 2
+  maxReplicaCount: 10
+  triggers:
+    - type: prometheus
+      metricType: AverageValue
+      metadata:
+        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+        metricName: merchant_service_business_ops_per_second
+        threshold: "5"
+        activationThreshold: "0.5"
+        query: |
+          (sum(rate(merchant_apply_total{namespace="kubereats-dev"}[2m])) or on() vector(0))
+          + (sum(rate(merchant_menu_created_total{namespace="kubereats-dev"}[2m])) or on() vector(0))
+          + (sum(rate(merchant_menu_deleted_total{namespace="kubereats-dev"}[2m])) or on() vector(0))
+          + (sum(rate(merchant_orders_confirmed_total{namespace="kubereats-dev"}[2m])) or on() vector(0))
+    - type: prometheus
+      metricType: AverageValue
+      metadata:
+        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+        metricName: merchant_service_cpu_cores
+        threshold: "0.25"
+        activationThreshold: "0.05"
+        query: |
+          sum(rate(container_cpu_usage_seconds_total{namespace="kubereats-dev", pod=~"merchant-service-.*", container!="", container!="POD"}[2m])) or on() vector(0)
