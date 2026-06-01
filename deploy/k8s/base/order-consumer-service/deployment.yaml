@@ -25,12 +25,19 @@ spec:
         - name: worker
           image: ghcr.io/kubereats/order-consumer-service:dev
           imagePullPolicy: Always
+          ports:
+            - name: metrics
+              containerPort: 9100
           env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: kubereats-db-app
                   key: DATABASE_URL
+            - name: ORDER_CONSUMER_METRICS_ADDRESS
+              value: "0.0.0.0"
+            - name: ORDER_CONSUMER_METRICS_PORT
+              value: "9100"
           envFrom:
             - configMapRef:
                 name: order-consumer-service-config
