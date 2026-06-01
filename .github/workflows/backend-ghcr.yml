@@ -293,7 +293,7 @@ jobs:
                       continue
                   if in_images and stripped.startswith("newTag:"):
                       indent = line[: len(line) - len(line.lstrip())]
-                      out.append(f"{indent}newTag: {short_sha}")
+                      out.append(f'{indent}newTag: "{short_sha}"')
                       changed = True
                       in_images = False
                       continue
