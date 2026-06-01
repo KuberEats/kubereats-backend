@@ -9,4 +9,4 @@ patches:
   - path: patch-image.yaml
 images:
   - name: ghcr.io/kubereats/order-consumer-service
-    newTag: 43198f8
+    newTag: 6b34391
