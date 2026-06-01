@@ -113,7 +113,6 @@ class UserInfo(TimestampMixin, Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False)
-    history_records = Column(Text)
     is_active = Column(Boolean, default=True, nullable=False)
 
     refresh_tokens = relationship(
