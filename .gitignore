@@ -7,3 +7,6 @@ notification.db
 .env
 *.log
 *.pid
+.scannerwork/
+coverage.xml
+.coverage
