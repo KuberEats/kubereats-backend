@@ -4,4 +4,5 @@ resources:
   - deployment.yaml
   - service.yaml
   - configmap.yaml
+  - servicemonitor.yaml
 # secret.example.yaml is intentionally not included.
