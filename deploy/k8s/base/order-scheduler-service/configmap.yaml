@@ -7,6 +7,7 @@ data:
   LOG_LEVEL: info
   SERVICE_NAME: order-scheduler-service
   QUEUE_BACKEND: fake
+  CORS_ALLOW_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,https://api.kubereats.click,https://kubereats.click,https://www.kubereats.click
   DISPATCH_LEAD_MINUTES: "30"
   MAX_SCHEDULE_DAYS: "30"
   INTERNAL_TASK_AUTH_ENABLED: "false"
