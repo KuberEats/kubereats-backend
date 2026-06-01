@@ -198,10 +198,16 @@ def test_create_menu_item_success(merchant_service, approved_merchant):
         item_name="Fried Rice",
         price=Decimal("80"),
         max_daily_quantity=15,
+        dietary_type="OVO_LACTO",
+        allergens=["蛋", "奶"],
+        certifications=["SGS"],
     )
     result = merchant_service.create_menu_item(approved_merchant.user_id, data)
     assert result.item_name == "Fried Rice"
     assert result.merchant_id == approved_merchant.id
+    assert result.dietary_type == "OVO_LACTO"
+    assert result.allergens == ["蛋", "奶"]
+    assert result.certifications == ["SGS"]
 
 
 def test_create_menu_item_not_approved_raises_403(merchant_service, test_merchant):
@@ -222,11 +228,18 @@ def test_list_menu_items(merchant_service, approved_merchant, test_menu):
 
 
 def test_update_menu_item_success(merchant_service, approved_merchant, test_menu):
-    data = MenuUpdateRequest(item_name="Cheeseburger")
+    data = MenuUpdateRequest(
+        item_name="Cheeseburger",
+        dietary_type="MEAT",
+        allergens=["麩質"],
+        certifications=["HACCP"],
+    )
     result = merchant_service.update_menu_item(
         approved_merchant.user_id, test_menu.id, data
     )
     assert result.item_name == "Cheeseburger"
+    assert result.allergens == ["麩質"]
+    assert result.certifications == ["HACCP"]
 
 
 def test_update_menu_item_not_found_raises_404(merchant_service, approved_merchant):

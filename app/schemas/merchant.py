@@ -9,6 +9,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 MerchantSortKey = Literal["people", "popular", "recommend"]
+DietaryType = Literal["MEAT", "VEGAN", "OVO_LACTO", "OVO", "LACTO", "PESCATARIAN"]
 
 
 class MerchantApplyRequest(BaseModel):
@@ -121,6 +122,12 @@ class MenuCreateRequest(BaseModel):
         default=None,
         validation_alias=AliasChoices("image_id", "imageId"),
     )
+    dietary_type: DietaryType = Field(
+        default="MEAT",
+        validation_alias=AliasChoices("dietary_type", "dietaryType"),
+    )
+    allergens: list[str] = Field(default_factory=list)
+    certifications: list[str] = Field(default_factory=list)
 
 
 class MenuUpdateRequest(BaseModel):
@@ -141,6 +148,12 @@ class MenuUpdateRequest(BaseModel):
         default=None,
         validation_alias=AliasChoices("image_id", "imageId"),
     )
+    dietary_type: DietaryType | None = Field(
+        default=None,
+        validation_alias=AliasChoices("dietary_type", "dietaryType"),
+    )
+    allergens: list[str] | None = None
+    certifications: list[str] | None = None
 
 
 class MenuResponse(BaseModel):
@@ -152,6 +165,9 @@ class MenuResponse(BaseModel):
     price: float
     max_daily_quantity: int = Field(serialization_alias="maxDailyQuantity")
     image_id: str | None = Field(default=None, serialization_alias="imageId")
+    dietary_type: str = Field(serialization_alias="dietaryType")
+    allergens: list[str]
+    certifications: list[str]
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
 

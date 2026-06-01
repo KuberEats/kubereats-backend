@@ -70,6 +70,9 @@ class Menu(TimestampMixin, Base):
     max_daily_quantity = Column(Integer, default=0, nullable=False)
     image_id = Column(String(255))
     price = Column(Numeric(10, 2), nullable=False)
+    dietary_type = Column(String(32), default="MEAT", nullable=False)
+    allergens = Column(JSON, default=list, nullable=False)
+    certifications = Column(JSON, default=list, nullable=False)
 
     merchant = relationship("MerchantInfo", back_populates="menus")
     order_items = relationship("OrderItem", back_populates="menu")

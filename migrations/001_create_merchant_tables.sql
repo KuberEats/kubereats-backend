@@ -39,11 +39,23 @@ CREATE TABLE IF NOT EXISTS menu (
     price               NUMERIC(10,2) NOT NULL,
     max_daily_quantity  INTEGER       NOT NULL DEFAULT 0,
     image_id            VARCHAR(255),
+    dietary_type        VARCHAR(32)   NOT NULL DEFAULT 'MEAT',
+    allergens           JSONB         NOT NULL DEFAULT '[]',
+    certifications      JSONB         NOT NULL DEFAULT '[]',
     created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS ix_menu_merchant_id ON menu(merchant_id);
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS dietary_type VARCHAR(32) NOT NULL DEFAULT 'MEAT';
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS allergens JSONB NOT NULL DEFAULT '[]';
+
+ALTER TABLE menu
+    ADD COLUMN IF NOT EXISTS certifications JSONB NOT NULL DEFAULT '[]';
 
 CREATE TABLE IF NOT EXISTS orders (
     id           SERIAL PRIMARY KEY,

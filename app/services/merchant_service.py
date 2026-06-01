@@ -114,6 +114,9 @@ class MerchantService:
                 price=data.price,
                 max_daily_quantity=data.max_daily_quantity,
                 image_id=data.image_id,
+                dietary_type=data.dietary_type,
+                allergens=data.allergens,
+                certifications=data.certifications,
             )
         )
         self.merchant_repo.commit()
