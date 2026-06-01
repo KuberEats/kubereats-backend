@@ -10,4 +10,4 @@ patches:
   - path: patch-service-nodeport.yaml
 images:
   - name: ghcr.io/kubereats/merchant-service
-    newTag: b795b1f
+    newTag: 32d8bf2
