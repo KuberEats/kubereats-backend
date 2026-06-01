@@ -172,3 +172,45 @@ def test_generate_report_returns_download_url_without_celery():
     assert data["url"] == (
         f"https://api.kubereats.click/finance/reports/{data['filename']}"
     )
+
+
+def test_generate_report_handles_unicode_merchant_data():
+    db = TestingSessionLocal()
+
+    from app import models
+    from decimal import Decimal
+
+    merchant = models.MerchantInfo(
+        user_id=1,
+        merchant_name="語言測試商家",
+        campus="Main",
+        category="Food",
+        delivery_time="30 min",
+    )
+    db.add(merchant)
+    db.commit()
+
+    order = models.Order(
+        user_id=1,
+        total_amount=Decimal("200.00"),
+        order_status=1,
+    )
+    db.add(order)
+    db.commit()
+
+    db.add(
+        models.Finance(
+            merchant_id=merchant.id,
+            order_id=order.id,
+            settlement_amount=Decimal("180.00"),
+            report_data={"status": "已付款"},
+        )
+    )
+    db.commit()
+    merchant_id = merchant.id
+    db.close()
+
+    response = client.post(f"/finance/generate-report?merchant_id={merchant_id}")
+
+    assert response.status_code == 200
+    assert response.json()["filename"].endswith(".pdf")

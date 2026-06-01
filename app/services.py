@@ -141,6 +141,13 @@ class MonitoringService:
 
 class ReportService:
     REPORT_DIR = Path("reports")
+    FONT_FAMILY = "NotoCJK"
+    FONT_PATHS = (
+        Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf"),
+        Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttf"),
+    )
 
     @staticmethod
     def get_history(db: Session):
@@ -185,6 +192,24 @@ class ReportService:
         }
 
     @staticmethod
+    def configure_report_font(pdf: FPDF) -> bool:
+        for font_path in ReportService.FONT_PATHS:
+            if font_path.exists():
+                pdf.add_font(ReportService.FONT_FAMILY, "", str(font_path))
+                pdf.set_font(ReportService.FONT_FAMILY, size=12)
+                return True
+
+        pdf.set_font("Arial", size=12)
+        return False
+
+    @staticmethod
+    def pdf_text(value, unicode_font: bool):
+        text = str(value)
+        if unicode_font:
+            return text
+        return text.encode("latin-1", errors="replace").decode("latin-1")
+
+    @staticmethod
     def generate_report_file(db: Session, merchant_id: int):
         merchant = db.query(models.MerchantInfo).filter(
             models.MerchantInfo.id == merchant_id
@@ -198,11 +223,14 @@ class ReportService:
 
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("Arial", size=12)
+        unicode_font = ReportService.configure_report_font(pdf)
         pdf.cell(
             200,
             10,
-            text=f"Financial Report for {merchant.merchant_name}",
+            text=ReportService.pdf_text(
+                f"Financial Report for {merchant.merchant_name}",
+                unicode_font,
+            ),
             new_x="LMARGIN",
             new_y="NEXT",
             align="C",
@@ -210,7 +238,10 @@ class ReportService:
         pdf.cell(
             200,
             10,
-            text=f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            text=ReportService.pdf_text(
+                f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                unicode_font,
+            ),
             new_x="LMARGIN",
             new_y="NEXT",
         )
@@ -230,7 +261,7 @@ class ReportService:
             )
             pdf.cell(40, 10, str(record.order_id), 1)
             pdf.cell(60, 10, f"${record.settlement_amount}", 1)
-            pdf.cell(60, 10, status, 1)
+            pdf.cell(60, 10, ReportService.pdf_text(status, unicode_font), 1)
             pdf.ln()
             total_settlement += float(record.settlement_amount)
 
@@ -238,7 +269,10 @@ class ReportService:
         pdf.cell(
             200,
             10,
-            text=f"Total Settlement: ${total_settlement}",
+            text=ReportService.pdf_text(
+                f"Total Settlement: ${total_settlement}",
+                unicode_font,
+            ),
             new_x="LMARGIN",
             new_y="NEXT",
         )
