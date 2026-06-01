@@ -11,3 +11,4 @@ htmlcov/
 node_modules/
 .DS_Store
 work_flow.sh
+.scannerwork/
