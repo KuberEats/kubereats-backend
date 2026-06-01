@@ -26,4 +26,23 @@ test = "pytest:console_main"
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
 ]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+relative_files = true
+source = ["app"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
