@@ -32,6 +32,12 @@ class CommitteeRepository:
         self.db.flush()
         return merchant
 
+    def update_merchant(self, merchant: MerchantInfo, data: dict) -> MerchantInfo:
+        for key, value in data.items():
+            setattr(merchant, key, value)
+        self.db.flush()
+        return merchant
+
     def commit(self):
         self.db.commit()
 

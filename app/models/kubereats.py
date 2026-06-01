@@ -1,12 +1,14 @@
 from sqlalchemy import (
     Boolean,
     Column,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
     JSON,
     Numeric,
     String,
+    Text,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -52,5 +54,9 @@ class MerchantInfo(TimestampMixin, Base):
     delivery_time = Column(String(50), nullable=False)
     tags = Column(JSON, default=list, nullable=False)
     audit_status = Column(Integer, default=0, nullable=False)
+    cooperation_start_date = Column(Date, nullable=True)
+    cooperation_end_date = Column(Date, nullable=True)
+    suspended_at = Column(DateTime(timezone=True), nullable=True)
+    suspension_reason = Column(Text, nullable=True)
 
     user = relationship("UserInfo")

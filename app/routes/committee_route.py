@@ -9,7 +9,12 @@ from app.core.metrics import (
 from app.database import get_db
 from app.models.kubereats import UserInfo
 from app.repo.committee_repo import CommitteeRepository
-from app.schemas.committee import AuditResultResponse, MerchantReviewResponse
+from app.schemas.committee import (
+    AuditResultResponse,
+    MerchantApprovalRequest,
+    MerchantReviewResponse,
+    MerchantSuspendRequest,
+)
 from app.services.committee_service import CommitteeService
 
 router = APIRouter(prefix="/committee", tags=["Committee"])
@@ -40,10 +45,11 @@ def list_all_merchants(
 @router.patch("/merchants/{merchant_id}/approve", response_model=AuditResultResponse)
 def approve_merchant(
     merchant_id: int,
+    data: MerchantApprovalRequest,
     current_user: UserInfo = Depends(committee_role),
     service: CommitteeService = Depends(get_committee_service),
 ):
-    result = service.approve_merchant(merchant_id)
+    result = service.approve_merchant(merchant_id, data)
     committee_merchant_approved_total.inc()
     return result
 
@@ -57,3 +63,13 @@ def reject_merchant(
     result = service.reject_merchant(merchant_id)
     committee_merchant_rejected_total.inc()
     return result
+
+
+@router.patch("/merchants/{merchant_id}/suspend", response_model=AuditResultResponse)
+def suspend_merchant(
+    merchant_id: int,
+    data: MerchantSuspendRequest,
+    current_user: UserInfo = Depends(committee_role),
+    service: CommitteeService = Depends(get_committee_service),
+):
+    return service.suspend_merchant(merchant_id, data)
