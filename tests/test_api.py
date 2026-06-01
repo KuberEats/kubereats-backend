@@ -50,6 +50,12 @@ def test_get_finance_history_prefixed_alias():
     assert isinstance(response.json(), list)
 
 
+def test_get_finance_reports_prefixed_alias():
+    response = client.get("/finance/reports")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
 def test_get_finance_history_legacy_api_alias():
     response = client.get("/api/finance/history")
     assert response.status_code == 200
@@ -115,3 +121,46 @@ def test_get_monthly_item_distribution_api():
     assert data[0]["itemName"] == "經典牛肉堡"
     assert data[0]["totalAmount"] == 150.0
     assert data[0]["percentage"] == 100.0
+
+
+def test_generate_report_returns_download_url_without_celery():
+    db = TestingSessionLocal()
+
+    from app import models
+    from decimal import Decimal
+
+    merchant = models.MerchantInfo(
+        user_id=1,
+        merchant_name="Report Merchant",
+        campus="Main",
+        category="Food",
+        delivery_time="30 min",
+    )
+    db.add(merchant)
+    db.commit()
+
+    order = models.Order(
+        user_id=1,
+        total_amount=Decimal("150.00"),
+        order_status=1,
+    )
+    db.add(order)
+    db.commit()
+
+    db.add(
+        models.Finance(
+            merchant_id=merchant.id,
+            order_id=order.id,
+            settlement_amount=Decimal("135.00"),
+        )
+    )
+    db.commit()
+    merchant_id = merchant.id
+    db.close()
+
+    response = client.post(f"/finance/generate-report?merchant_id={merchant_id}")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["filename"].endswith(".pdf")
+    assert f"/finance/reports/{data['filename']}" in data["url"]

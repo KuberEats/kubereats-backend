@@ -80,3 +80,8 @@ class MonthlyItemDistribution(BaseModel):
     itemName: str
     totalAmount: float
     percentage: float
+
+
+class ReportResult(BaseModel):
+    filename: str
+    url: str
