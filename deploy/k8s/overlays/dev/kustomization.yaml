@@ -9,9 +9,10 @@ resources:
   - tagging-service
   - finance-service
   - recommendation-service
+  - order-scheduler-service
 # Recommendation service is exposed in dev on NodePort 31086.
+# Order scheduler service is exposed in dev on NodePort 31087.
 # Keep these services out of dev sync until their images, secrets, and dependencies are ready:
 # - notification-service
-# - order-scheduler-service
 # - employee-order
 # ingress.example.yaml is optional and intentionally not included.

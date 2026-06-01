@@ -7,5 +7,4 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/kubereats/order-scheduler-service:dev
           imagePullPolicy: Always

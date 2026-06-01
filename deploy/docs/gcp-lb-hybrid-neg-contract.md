@@ -34,6 +34,11 @@ api.kubereats.click/recommendation/*
   -> backend-service-recommendation
   -> hybrid-neg-recommendation
   -> k8s-worker-a1:31086, k8s-worker-a2:31086, k8s-worker-b1:31086, k8s-worker-b2:31086
+
+api.kubereats.click/order-scheduler/*
+  -> backend-service-order-scheduler
+  -> hybrid-neg-order-scheduler
+  -> k8s-worker-a1:31087, k8s-worker-a2:31087, k8s-worker-b1:31087, k8s-worker-b2:31087
 ```
 
 ## Worker Endpoint Table
@@ -64,6 +69,10 @@ api.kubereats.click/recommendation/*
 | recommendation-service | 31086 | `/health` | k8s-worker-a2 | 192.168.17.22 | 192.168.17.22:31086 |
 | recommendation-service | 31086 | `/health` | k8s-worker-b1 | 192.168.17.31 | 192.168.17.31:31086 |
 | recommendation-service | 31086 | `/health` | k8s-worker-b2 | 192.168.17.32 | 192.168.17.32:31086 |
+| order-scheduler-service | 31087 | `/health` | k8s-worker-a1 | 192.168.17.21 | 192.168.17.21:31087 |
+| order-scheduler-service | 31087 | `/health` | k8s-worker-a2 | 192.168.17.22 | 192.168.17.22:31087 |
+| order-scheduler-service | 31087 | `/health` | k8s-worker-b1 | 192.168.17.31 | 192.168.17.31:31087 |
+| order-scheduler-service | 31087 | `/health` | k8s-worker-b2 | 192.168.17.32 | 192.168.17.32:31087 |
 
 ## GCP Health Check Recommendations
 
@@ -75,6 +84,7 @@ Use one GCP health check per backend service:
 - tagging backend service: HTTP health check path `/health`, port `31084`
 - finance backend service: HTTP health check path `/health`, port `31085`
 - recommendation backend service: HTTP health check path `/health`, port `31086`
+- order scheduler backend service: HTTP health check path `/health`, port `31087`
 
 The Kubernetes readiness probes use DB-aware paths where applicable, but the GCP load balancer should use lightweight liveness paths unless production policy requires dependency-aware readiness.
 
@@ -90,10 +100,11 @@ Required destination ports:
 - `31084` for tagging-service
 - `31085` for finance-service
 - `31086` for recommendation-service
+- `31087` for order-scheduler-service
 
 Checklist:
 
-- Permit GCP LB / health check source ranges to the worker node InternalIPs on `31081-31086`.
+- Permit GCP LB / health check source ranges to the worker node InternalIPs on `31081-31087`.
 - Confirm the on-prem firewall path from GCP to `192.168.17.21`, `192.168.17.22`, `192.168.17.31`, and `192.168.17.32`.
 - Do not open NodePort access to the whole internet unless another firewall layer restricts traffic to the GCP LB path.
 - Keep Argo CD private; do not expose Argo CD through this public load balancer.

@@ -6,7 +6,7 @@ This directory defines the first-pass on-prem Kubernetes deployment for Kubereat
 
 - Argo CD is installed in `argocd` and syncs this Git repository.
 - Kustomize `base` contains common Deployment, Service, ConfigMap, and secret examples.
-- Kustomize `overlays/dev` currently runs the phase 1 services plus `tagging-service`, `finance-service`, and `recommendation-service` in `kubereats-dev`.
+- Kustomize `overlays/dev` currently runs the phase 1 services plus `tagging-service`, `finance-service`, `recommendation-service`, and `order-scheduler-service` in `kubereats-dev`.
 - Kustomize `overlays/prod` is sample-only until production promotion is explicitly enabled.
 - The remaining backend services stay in `base` and per-service overlays, but are intentionally excluded from dev sync until their images, secrets, and external dependencies are ready.
 - CI should build and publish images, then commit image tag changes to Git. CI should not directly run `kubectl apply` against production because Git must remain the auditable desired state and Argo CD must own drift correction and rollback.
@@ -21,7 +21,7 @@ Current `main` has only repo-level documentation. Backend implementations are in
 | committee-service | `origin/module/fuwei-system` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health/live`, `/health/ready` | 8000 | `ghcr.io/kubereats/committee-service:dev` TODO publish | `uv run python scripts/migrate.py && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `DATABASE_URL`, `JWT_SECRET_KEY` | Manifest-ready; image registry/tag and secret required |
 | notification-service | `origin/module/notification` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health/live`, `/health/ready` | 8000 | `ghcr.io/kubereats/notification-service:dev` TODO publish | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `DATABASE_URL`, `REDIS_URL`, `INTERNAL_SERVICE_TOKENS` | API manifest-ready; worker deployment TODO |
 | finance-service | `origin/module/finance` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health` | 8000 | `ghcr.io/kubereats/finance-service:dev` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | `kubereats-db-app/DATABASE_URL` | Phase 2a dev overlay enabled |
-| order-scheduler-service | `origin/module/order-scheduler` | `Dockerfile.dev` only | `pyproject.toml`, `uv.lock`, `package.json` | `/health` | 8000 | `ghcr.io/kubereats/order-scheduler-service:dev` TODO publish | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` | `DATABASE_URL`, `RABBITMQ_URL`, `INTERNAL_TASK_TOKEN` | Needs production Dockerfile or approved dev image |
+| order-scheduler-service | `origin/module/order-scheduler` | `Dockerfile.dev` only | `pyproject.toml`, `uv.lock`, `package.json` | `/health` | 8000 | `ghcr.io/kubereats/order-scheduler-service:d36032e` | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` | `kubereats-db-app/DATABASE_URL`, optional `order-scheduler-service-secret/RABBITMQ_URL`, optional `order-scheduler-service-secret/INTERNAL_TASK_TOKEN` | Dev overlay enabled on NodePort 31087 |
 | recommendation-service | `origin/module/recommend` | `Dockerfile.dev` only | `pyproject.toml`, `uv.lock`, `package.json` | `/health` | 8000 | `ghcr.io/kubereats/recommendation-service:6ae09cb` | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload` | `kubereats-db-app/DATABASE_URL`, optional `recommendation-service-secret/OPENROUTER_API_KEY` | Dev overlay enabled on NodePort 31086 |
 | tagging-service | `origin/module/tagging` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/health` | 8000 | `ghcr.io/kubereats/tagging-service:dev` | `uv run uvicorn app.main:app --host 0.0.0.0 --port 8000` | `kubereats-db-app/DATABASE_URL` | Phase 2a dev overlay enabled |
 | verification-service | `origin/module/verification` | `Dockerfile` | `pyproject.toml`, `uv.lock` | `/healthz`, `/readyz`, `/health/live`, `/health/ready` | 8000 | `ghcr.io/kubereats/kubereats-verification:dev` TODO publish | `python scripts/migrate.py && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}` | `DATABASE_URL`, `JWT_SECRET_KEY`, optional SMTP/Mailgun values | Manifest-ready; image registry/tag and secret required |
@@ -37,7 +37,7 @@ Phase 1 deployed:
 - `committee-service`
 - `verification-service`
 
-Temporarily excluded from dev sync:
+Temporarily excluded from dev sync at Phase 1:
 
 - `notification-service`
 - `order-scheduler-service`
@@ -64,8 +64,6 @@ Both services read database configuration from the existing Kubernetes Secret `k
 Still intentionally excluded from dev sync:
 
 - `notification-service`: Redis and worker deployment need a separate phase.
-- `order-scheduler-service`: ownership conflict and active branch work; do not touch in Phase 2a.
-- `recommendation-service`: external API secret and production image readiness need a separate phase.
 - `employee-order`: no deployable service inventory in current repo contents.
 
 Run the Phase 2a smoke test from this repository:
@@ -84,6 +82,16 @@ SSH_KEY=/home/edtsai/tf-cloud-init ./deploy/scripts/smoke-test-phase2a.sh
 
 The service reads `DATABASE_URL` from `kubereats-db-app`. `OPENROUTER_API_KEY` may be provided through `recommendation-service-secret`, but that Secret is optional for deployment; without it, the service uses heuristic fallback behavior for recommendation ranking.
 
+## Order Scheduler Deployment Scope
+
+`order-scheduler-service` is deployed from `origin/module/order-scheduler` using the image `ghcr.io/kubereats/order-scheduler-service:d36032e`.
+
+| service | nodePort | health path | public route intent |
+| --- | ---: | --- | --- |
+| `order-scheduler-service` | `31087` | `/health` | `https://api.kubereats.click/order-scheduler/*` |
+
+The service reads `DATABASE_URL` from `kubereats-db-app`. `order-scheduler-service-secret` is optional in dev because the current ConfigMap uses `QUEUE_BACKEND=fake` and `INTERNAL_TASK_AUTH_ENABLED=false`; if RabbitMQ or internal task auth is enabled later, provide `RABBITMQ_URL` and `INTERNAL_TASK_TOKEN` through that Secret.
+
 ## Phase 1.5 - GCP Load Balancer Hybrid NEG Mode
 
 Dev does not use Kubernetes Ingress in Phase 1.5. Public HTTPS and path routing are handled by the GCP External HTTPS Load Balancer. Kubernetes exposes fixed NodePorts on the worker nodes so GCP Hybrid NEG endpoints can target `WorkerInternalIP:NodePort`.
@@ -100,6 +108,7 @@ Phase 1.5 fixed NodePorts:
 | `tagging-service` | `31084` | `/health` | `https://api.kubereats.click/tagging/*` |
 | `finance-service` | `31085` | `/health` | `https://api.kubereats.click/finance/*` |
 | `recommendation-service` | `31086` | `/health` | `https://api.kubereats.click/recommendation/*` |
+| `order-scheduler-service` | `31087` | `/health` | `https://api.kubereats.click/order-scheduler/*` |
 
 Check Argo CD and services:
 
@@ -126,13 +135,14 @@ Path rewrite warning: if the GCP URL map forwards `/merchant/health/live` unchan
 
 ## GHCR Image Build And Publish
 
-`.github/workflows/backend-ghcr.yml` builds the phase 1 services and Phase 2a services:
+`.github/workflows/backend-ghcr.yml` builds the phase 1 services, Phase 2a services, recommendation service, and order scheduler service:
 
 - `merchant-service` from `module/merchant` -> `ghcr.io/kubereats/merchant-service`
 - `committee-service` from `module/fuwei-system` -> `ghcr.io/kubereats/committee-service`
 - `verification-service` from `module/verification` -> `ghcr.io/kubereats/kubereats-verification`
 - `tagging-service` from `module/tagging` -> `ghcr.io/kubereats/tagging-service`
 - `finance-service` from `module/finance` -> `ghcr.io/kubereats/finance-service`
+- `order-scheduler-service` from `module/order-scheduler` -> `ghcr.io/kubereats/order-scheduler-service`
 
 Pull requests run dependency install, tests, and Docker build checks without pushing images. Phase 1 services also run the existing lint step. Pushes to `main`, `deploy/*`, `infra/*`, or `module/*` build and push both tags:
 
@@ -161,6 +171,7 @@ docker pull ghcr.io/kubereats/committee-service:<short-sha>
 docker pull ghcr.io/kubereats/kubereats-verification:<short-sha>
 docker pull ghcr.io/kubereats/tagging-service:<short-sha>
 docker pull ghcr.io/kubereats/finance-service:<short-sha>
+docker pull ghcr.io/kubereats/order-scheduler-service:<short-sha>
 ```
 
 ## Prerequisites
