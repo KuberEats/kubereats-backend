@@ -10,4 +10,4 @@ patches:
   - path: patch-service-nodeport.yaml
 images:
   - name: ghcr.io/kubereats/kubereats-verification
-    newTag: ea56622
+    newTag: "ea56622"

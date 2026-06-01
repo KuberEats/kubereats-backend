@@ -10,4 +10,4 @@ patches:
   - path: patch-service-nodeport.yaml
 images:
   - name: ghcr.io/kubereats/committee-service
-    newTag: 85268ce
+    newTag: "85268ce"

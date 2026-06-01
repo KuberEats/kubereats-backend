@@ -10,4 +10,4 @@ patches:
   - path: patch-service-nodeport.yaml
 images:
   - name: ghcr.io/kubereats/finance-service
-    newTag: 6440ce2
+    newTag: "6440ce2"

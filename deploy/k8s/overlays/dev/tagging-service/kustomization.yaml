@@ -10,4 +10,4 @@ patches:
   - path: patch-service-nodeport.yaml
 images:
   - name: ghcr.io/kubereats/tagging-service
-    newTag: 04ed1f9
+    newTag: "04ed1f9"
