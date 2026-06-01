@@ -10,6 +10,13 @@ from uuid import uuid4
 from fastapi import HTTPException
 
 from app.config import Settings, get_settings
+from app.metrics import (
+    reservation_capacity_failures,
+    reservation_items_requested,
+    reservation_processing,
+    reservation_requests,
+    reservations_cancelled,
+)
 from app.models.kubereats import (
     ReservationOutboxEvent,
     ReservationRequest,
@@ -121,6 +128,8 @@ class ReservationService:
             )
 
             self.reservation_repo.commit()
+            reservation_requests.inc(reservation.status)
+            reservation_items_requested.inc(amount=sum(menu_quantity_map.values()))
             return self._serialize_accepted(reservation)
         except Exception as error:
             if self.reservation_repo.is_integrity_error(error) and idempotency_key:
@@ -164,6 +173,7 @@ class ReservationService:
 
             if locked.status == "CANCELLED":
                 self.reservation_repo.commit()
+                reservations_cancelled.inc(locked.status)
                 return self._serialize_reservation(locked)
 
             if locked.status == "PENDING_RESERVATION" or locked.status == "PROCESSING":
@@ -173,6 +183,7 @@ class ReservationService:
                     "reservation_cancelled",
                     extra={"reservation_id": locked.id, "status": locked.status},
                 )
+                reservations_cancelled.inc(locked.status)
                 return self._serialize_reservation(locked)
 
             if locked.status == "RESERVED":
@@ -195,6 +206,7 @@ class ReservationService:
                     "reservation_cancelled",
                     extra={"reservation_id": locked.id, "status": locked.status},
                 )
+                reservations_cancelled.inc(locked.status)
                 return self._serialize_reservation(locked)
 
             self.reservation_repo.commit()
@@ -207,16 +219,21 @@ class ReservationService:
         reservation_id = int(payload["reservation_id"])
         started = self._start_processing(reservation_id)
         if started in TERMINAL_RESERVATION_STATUSES:
+            reservation_processing.inc(started)
             return {"status": started}
 
         try:
             result = self._reserve_capacity_transaction(reservation_id)
+            reservation_processing.inc(result["status"])
             return result
         except ReservationSoldOut as error:
             self._mark_sold_out(reservation_id, str(error))
+            reservation_processing.inc("SOLD_OUT")
+            reservation_capacity_failures.inc("sold_out")
             return {"status": "SOLD_OUT"}
         except Exception as error:
             self._mark_retryable_failure(reservation_id, str(error))
+            reservation_processing.inc("FAILED")
             raise
 
     def process_reservation_by_id(self, reservation_id: int):

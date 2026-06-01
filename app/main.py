@@ -1,8 +1,11 @@
+import time
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import Base, engine
+from app.metrics import metrics_response, record_http_request
 from app.models import kubereats  # noqa: F401
 from app.routes.internal_task_route import router as internal_task_router
 from app.routes.order_route import router as order_router
@@ -15,6 +18,28 @@ app = FastAPI(
     title="Kubereats Backend",
     version="0.1.0",
 )
+
+
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    started_at = time.perf_counter()
+    response = None
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        status = response.status_code if response else 500
+        route = request.scope.get("route")
+        path = getattr(route, "path", request.url.path)
+        record_http_request(
+            request.method,
+            path,
+            status,
+            time.perf_counter() - started_at,
+        )
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,3 +77,8 @@ def health_check():
 @app.get("/health-check")
 def health_check_probe():
     return get_health_status()
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    return metrics_response()

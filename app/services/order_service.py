@@ -9,6 +9,14 @@ from uuid import uuid4
 from fastapi import HTTPException
 
 from app.config import Settings, get_settings
+from app.metrics import (
+    order_items_created,
+    order_release_tasks,
+    order_status_label,
+    order_status_updates,
+    orders_cancelled,
+    orders_created,
+)
 from app.models.kubereats import Finance, Order, OrderItem, OutboxEvent
 from app.repo.menu_repo import MenuRepository
 from app.repo.order_repo import OrderRepository
@@ -59,7 +67,8 @@ class OrderService:
         )
 
         try:
-            # Ensure daily capacity records exist for all involved menu items before proceeding with order creation to prevent concurrency issues.
+            # Ensure capacity rows exist before order creation to prevent
+            # concurrent requests from overselling daily menu limits.
             self.order_repo.ensure_menu_daily_capacities(
                 menus.values(),
                 target_date,
@@ -114,6 +123,11 @@ class OrderService:
                 )
 
             self.order_repo.commit()
+            orders_created.inc(schedule_status)
+            order_items_created.inc(
+                schedule_status,
+                amount=sum(menu_quantity_map.values()),
+            )
             return self.get_order_by_id(order.id)
         except Exception as error:
             if self.order_repo.is_integrity_error(error) and idempotency_key:
@@ -174,6 +188,7 @@ class OrderService:
 
         order.order_status = order_status
         self.order_repo.commit()
+        order_status_updates.inc(order_status_label(order_status))
         return self.get_order_by_id(order.id)
 
     def cancel_order(self, order_id: int, reason: str | None = None):
@@ -218,6 +233,7 @@ class OrderService:
                 )
             )
             self.order_repo.commit()
+            orders_cancelled.inc("success")
             return self.get_order_by_id(order.id)
         except Exception:
             self.order_repo.rollback()
@@ -232,6 +248,7 @@ class OrderService:
 
             if order.schedule_status in {"released", "cancelled"}:
                 self.order_repo.commit()
+                order_release_tasks.inc(order.schedule_status)
                 return {"status": order.schedule_status}
 
             if order.schedule_status != "scheduled":
@@ -255,6 +272,7 @@ class OrderService:
                 )
             )
             self.order_repo.commit()
+            order_release_tasks.inc("released")
             return {"status": "released"}
         except Exception:
             self.order_repo.rollback()
@@ -430,12 +448,16 @@ class OrderService:
         now = datetime.now(timezone.utc)
 
         if scheduled_for <= now:
-            raise HTTPException(status_code=422, detail="scheduled_for cannot be in the past")
-
-        if scheduled_for > now + timedelta(days=self.settings.max_schedule_days):
             raise HTTPException(
                 status_code=422,
-                detail=f"scheduled_for cannot be more than {self.settings.max_schedule_days} days ahead",
+                detail="scheduled_for cannot be in the past",
+            )
+
+        max_schedule_days = self.settings.max_schedule_days
+        if scheduled_for > now + timedelta(days=max_schedule_days):
+            raise HTTPException(
+                status_code=422,
+                detail=f"scheduled_for cannot be more than {max_schedule_days} days ahead",
             )
 
         dispatch_at = scheduled_for - timedelta(
