@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
-from app.core.metrics import auth_login_total, auth_register_total, auth_token_refresh_total
+from app.core.metrics import (
+    auth_login_total,
+    auth_register_total,
+    auth_token_refresh_total,
+)
 from app.database import get_db
 from app.models.kubereats import UserInfo
 from app.repo.user_repo import UserRepository
