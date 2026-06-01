@@ -49,6 +49,11 @@ def health_check():
     return get_health_status()
 
 
+@app.get("/order-scheduler/health", include_in_schema=False)
+def prefixed_health_check():
+    return get_health_status()
+
+
 @app.get("/health-check")
 def health_check_probe():
     return get_health_status()
