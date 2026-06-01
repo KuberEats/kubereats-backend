@@ -174,6 +174,11 @@ def test_post_reservation_request_creates_pending_items_and_outbox(session_facto
         db.close()
 
 
+def test_menu_model_matches_public_image_url_schema():
+    assert "image_url" in Menu.__table__.columns
+    assert "image_id" not in Menu.__table__.columns
+
+
 def test_same_user_idempotency_key_returns_same_reservation_without_duplicates(db):
     first = service(db).create_reservation_request(
         payload(),

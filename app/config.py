@@ -10,8 +10,9 @@ class Settings(BaseSettings):
     cors_allow_origins: str = (
         "http://localhost:5173,"
         "http://127.0.0.1:5173,"
-        "https://api.kubereats.click/,"
-        "https://kubereats.click/"
+        "https://api.kubereats.click,"
+        "https://kubereats.click,"
+        "https://www.kubereats.click"
     )
     rabbitmq_url: str = "amqp://guest:guest@rabbitmq:5672/"
     dispatch_lead_minutes: int = 30

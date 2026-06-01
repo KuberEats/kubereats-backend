@@ -186,7 +186,7 @@ def seed():
             merchant_id=merchant_1.id,
             item_name="Chicken Bento",
             max_daily_quantity=50,
-            image_id="chicken-bento.jpg",
+            image_url="chicken-bento.jpg",
             price=Decimal("120.00"),
         )
 
@@ -194,7 +194,7 @@ def seed():
             merchant_id=merchant_1.id,
             item_name="Pork Rice",
             max_daily_quantity=40,
-            image_id="pork-rice.jpg",
+            image_url="pork-rice.jpg",
             price=Decimal("110.00"),
         )
 
@@ -202,7 +202,7 @@ def seed():
             merchant_id=merchant_2.id,
             item_name="起司豬排咖哩",
             max_daily_quantity=80,
-            image_id="pork-curry.jpg",
+            image_url="pork-curry.jpg",
             price=Decimal("150.00"),
         )
 
@@ -210,7 +210,7 @@ def seed():
             merchant_id=merchant_3.id,
             item_name="舒肥雞胸餐盒",
             max_daily_quantity=35,
-            image_id="chicken-salad-box.jpg",
+            image_url="chicken-salad-box.jpg",
             price=Decimal("130.00"),
         )
 
@@ -218,7 +218,7 @@ def seed():
             merchant_id=merchant_4.id,
             item_name="紅燒牛肉麵",
             max_daily_quantity=45,
-            image_id="beef-noodle.jpg",
+            image_url="beef-noodle.jpg",
             price=Decimal("140.00"),
         )
 
@@ -226,7 +226,7 @@ def seed():
             merchant_id=merchant_5.id,
             item_name="三寶飯",
             max_daily_quantity=60,
-            image_id="bbq-rice.jpg",
+            image_url="bbq-rice.jpg",
             price=Decimal("115.00"),
         )
 
