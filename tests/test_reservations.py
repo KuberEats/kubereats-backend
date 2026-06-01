@@ -114,6 +114,9 @@ def payload(
     items=None,
     service_date=None,
     pickup_slot="12:00-12:30",
+    comments=None,
+    diner_name=None,
+    diner_phone=None,
 ):
     return ReservationCreate(
         user_id=1,
@@ -121,6 +124,9 @@ def payload(
         service_date=service_date or date.today() + timedelta(days=1),
         pickup_slot=pickup_slot,
         pickup_option="SELF_PICKUP",
+        comments=comments,
+        diner_name=diner_name,
+        diner_phone=diner_phone,
         items=items
         or [
             ReservationItemCreate(
@@ -160,16 +166,29 @@ def add_capacity(db, *, menu_item_id=1, total_capacity=1):
 def test_post_reservation_request_creates_pending_items_and_outbox(session_factory):
     db = session_factory()
     try:
-        response = service(db).create_reservation_request(payload(quantity=2))
+        response = service(db).create_reservation_request(
+            payload(
+                quantity=2,
+                comments="少冰，餐點分開裝",
+                diner_name="王小明",
+                diner_phone="0912345678",
+            )
+        )
         assert response["status"] == "PENDING_RESERVATION"
         assert response["reservation_token"] == response["order_token"]
 
         reservation = db.query(ReservationRequest).one()
         assert reservation.status == "PENDING_RESERVATION"
+        assert reservation.comments == "少冰，餐點分開裝"
+        assert reservation.diner_name == "王小明"
+        assert reservation.diner_phone == "0912345678"
         assert db.query(ReservationRequestItem).count() == 1
         event = db.query(ReservationOutboxEvent).one()
         assert event.event_type == "ReservationRequested"
         assert event.status == "PENDING"
+        assert event.payload["comments"] == "少冰，餐點分開裝"
+        assert event.payload["diner_name"] == "王小明"
+        assert event.payload["diner_phone"] == "0912345678"
     finally:
         db.close()
 
@@ -191,12 +210,21 @@ def test_same_user_idempotency_key_returns_same_reservation_without_duplicates(d
 
 
 def test_get_reservation_returns_pending_before_worker_processes_it(db):
-    created = service(db).create_reservation_request(payload())
+    created = service(db).create_reservation_request(
+        payload(
+            comments="放警衛室",
+            diner_name="陳大文",
+            diner_phone="0987654321",
+        )
+    )
 
     result = service(db).get_reservation_by_token(created["order_token"])
 
     assert result["status"] == "PENDING_RESERVATION"
     assert result["reservation_token"] == created["order_token"]
+    assert result["comments"] == "放警衛室"
+    assert result["diner_name"] == "陳大文"
+    assert result["diner_phone"] == "0987654321"
     assert result["message"] == "Checking meal availability."
 
 

@@ -40,6 +40,28 @@ class ReservationCreate(BaseModel):
         default="SELF_PICKUP",
         validation_alias=AliasChoices("pickup_option", "pickupOption"),
     )
+    comments: str | None = Field(
+        default=None,
+        max_length=1000,
+        validation_alias=AliasChoices("comments", "note", "notes", "remark"),
+    )
+    diner_name: str | None = Field(
+        default=None,
+        max_length=100,
+        validation_alias=AliasChoices(
+            "diner_name", "dinerName", "guest_name", "guestName"
+        ),
+    )
+    diner_phone: str | None = Field(
+        default=None,
+        max_length=32,
+        validation_alias=AliasChoices(
+            "diner_phone",
+            "dinerPhone",
+            "guest_phone",
+            "guestPhone",
+        ),
+    )
     items: list[ReservationItemCreate] = Field(min_length=1)
 
 
@@ -65,6 +87,9 @@ class ReservationResponse(BaseModel):
     pickup_slot: str | None = Field(default=None, serialization_alias="pickupSlot")
     pickup_option: str = Field(serialization_alias="pickupOption")
     pickup_number: str | None = Field(default=None, serialization_alias="pickupNumber")
+    comments: str | None = None
+    diner_name: str | None = Field(default=None, serialization_alias="dinerName")
+    diner_phone: str | None = Field(default=None, serialization_alias="dinerPhone")
     message: str
     items: list[ReservationItemResponse] = Field(default_factory=list)
     failed_items: list[ReservationItemResponse] = Field(
