@@ -81,7 +81,7 @@ class Menu(TimestampMixin, Base):
     merchant_id = Column(Integer, ForeignKey("merchant_info.id"), nullable=False)
     item_name = Column(String(100), nullable=False)
     max_daily_quantity = Column(Integer, default=0, nullable=False)
-    image_id = Column(String(255))
+    image_url = Column(String(255))
     price = Column(Numeric(10, 2), nullable=False)
 
     merchant = relationship("MerchantInfo", back_populates="menus")
