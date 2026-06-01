@@ -146,6 +146,34 @@ uv run pytest tests/ -v
 測試使用真實 PostgreSQL，需要先確保 `DATABASE_URL` 指向可連線的資料庫。
 每個測試結束後透過 transaction rollback 自動還原，不會互相影響。
 
+## SonarQube
+
+此分支包含 `sonar-project.properties`，SonarQube project key 為：
+
+```text
+kubereats-merchant-service
+```
+
+Kubereats 內網 SonarQube endpoint：
+
+```text
+http://192.168.17.11:31090
+```
+
+從可連線到 Kubernetes private network 的主機執行 scanner。不要把 token 寫進 Git：
+
+```bash
+export SONAR_TOKEN='<token from SonarQube>'
+
+docker run --rm --network host \
+  -e SONAR_HOST_URL=http://192.168.17.11:31090 \
+  -e SONAR_TOKEN \
+  -v "$PWD:/usr/src" \
+  sonarsource/sonar-scanner-cli
+```
+
+GitHub hosted runners 無法連到 `192.168.17.11` 私網 endpoint；若要自動化，請使用能連到該網段的 self-hosted runner，並把 token 存在 CI secret。
+
 ## Deployment（GCP + Kubernetes）
 
 ```bash
