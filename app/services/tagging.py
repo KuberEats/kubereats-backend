@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from ..models import UserInfo, Order, Tag, user_tags, Finance
 from sqlalchemy import func
+from ..metrics import classify_tag, user_tags_assigned
 
 class TaggingService:
     def __init__(self, db: Session):
@@ -46,6 +47,7 @@ class TaggingService:
         
         if tag not in user.tags:
             user.tags.append(tag)
+            user_tags_assigned.inc(classify_tag(tag_name))
 
 class MerchantService:
     def __init__(self, db: Session):

@@ -1,4 +1,5 @@
 import pytest
+from fastapi.testclient import TestClient
 from app.main import app
 from app.services.tagging import TaggingService, MerchantService, StaffService
 from app.models import UserInfo, Order, Tag, Finance, MerchantInfo
@@ -15,6 +16,16 @@ def test_public_tagging_routes_are_registered():
     assert "/tagging/generate-barcode/{user_id}" in routes
     assert "/api/tagging/user/{user_id}" in routes
     assert "/api/tagging/generate-barcode/{user_id}" in routes
+
+
+def test_metrics_endpoint_exposes_tagging_app_metrics():
+    client = TestClient(app)
+
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert "tagging_http_requests_total" in response.text
+    assert "tagging_user_tag_sync_total" in response.text
 
 def test_get_tags_by_user_id(db_session):
     # Setup

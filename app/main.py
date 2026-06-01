@@ -2,6 +2,13 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
+from .metrics import (
+    barcodes_generated,
+    metrics_response,
+    record_http_request,
+    user_tag_syncs,
+    user_tags_returned,
+)
 from .services.tagging import TaggingService, MerchantService, StaffService
 from .models import Finance, Order, UserInfo, MerchantInfo, Tag
 import decimal
@@ -28,6 +35,28 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="KubeEats Tagging Service", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    started_at = time.perf_counter()
+    response = None
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        status = response.status_code if response else 500
+        route = request.scope.get("route")
+        path = getattr(route, "path", request.url.path)
+        record_http_request(
+            request.method,
+            path,
+            status,
+            time.perf_counter() - started_at,
+        )
 
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
@@ -67,6 +96,11 @@ def grafana_check(db: Session = Depends(get_db)):
         raise HTTPException(status_code=503, detail=status)
     
     return status
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    return metrics_response()
 
 app.add_middleware(
     CORSMiddleware,
@@ -147,8 +181,10 @@ def generate_report(merchant_id: int, db: Session = Depends(get_db)):
 def get_user_tags(user_id: int, db: Session = Depends(get_db)):
     service = TaggingService(db)
     # Trigger update based on history
-    service.update_user_tags_based_on_orders(user_id)
+    synced = service.update_user_tags_based_on_orders(user_id)
     tags = service.get_tags_by_user_id(user_id)
+    user_tag_syncs.inc("success" if synced is not None else "user_not_found")
+    user_tags_returned.inc(amount=len(tags))
     return {"user_id": user_id, "tags": tags}
 
 
@@ -158,6 +194,7 @@ def get_user_tags(user_id: int, db: Session = Depends(get_db)):
 def generate_staff_barcode(user_id: int, db: Session = Depends(get_db)):
     user = db.query(UserInfo).filter(UserInfo.id == user_id).first()
     if not user:
+        barcodes_generated.inc("user_not_found")
         raise HTTPException(status_code=404, detail="User not found")
     
     # Use Code128 barcode format
@@ -172,4 +209,9 @@ def generate_staff_barcode(user_id: int, db: Session = Depends(get_db)):
     
     # Encode to Base64
     img_str = base64.b64encode(buffer.getvalue()).decode()
-    return {"user_id": user_id, "staff_code": staff_code, "barcode_base64": f"data:image/png;base64,{img_str}"}
+    barcodes_generated.inc("success")
+    return {
+        "user_id": user_id,
+        "staff_code": staff_code,
+        "barcode_base64": f"data:image/png;base64,{img_str}",
+    }
