@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import get_settings
 from app.database import Base, engine
 from app.models import kubereats  # noqa: F401
 from app.routes.internal_task_route import router as internal_task_router
@@ -8,6 +9,7 @@ from app.routes.order_route import router as order_router
 from app.routes.reservation_route import router as reservation_router
 
 Base.metadata.create_all(bind=engine)
+settings = get_settings()
 
 app = FastAPI(
     title="Kubereats Backend",
@@ -16,10 +18,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

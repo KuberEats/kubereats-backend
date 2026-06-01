@@ -7,6 +7,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     queue_backend: str = "fake"
+    cors_allow_origins: str = (
+        "http://localhost:5173,"
+        "http://127.0.0.1:5173,"
+        "https://api.kubereats.click/,"
+        "https://kubereats.click/"
+    )
     rabbitmq_url: str = "amqp://guest:guest@rabbitmq:5672/"
     dispatch_lead_minutes: int = 30
     max_schedule_days: int = 30
@@ -26,6 +32,11 @@ class Settings(BaseSettings):
     reservation_outbox_max_retries: int = 10
     reservation_processing_lease_seconds: int = 300
     reservation_db_polling_batch_size: int = 25
+
+    @property
+    def cors_origins(self) -> list[str]:
+        origins = [origin.strip().rstrip("/") for origin in self.cors_allow_origins.split(",")]
+        return [origin for origin in origins if origin]
 
 
 @lru_cache
