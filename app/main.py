@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.models import kubereats  # noqa: F401
 from app.routes.recommendation_route import router as recommendation_router
-from app.services.recommendation.metrics import recommendation_metrics
+from app.services.recommendation.metrics import metrics_response, recommendation_metrics
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
@@ -91,3 +91,8 @@ def health_check():
 @app.get("/health-check")
 def health_check_alias():
     return health_check()
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    return metrics_response()

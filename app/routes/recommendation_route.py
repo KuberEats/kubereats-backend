@@ -30,7 +30,14 @@ def recommend_merchants_by_prompt(
     request: RecommendationRequest,
     service: RecommendationService = Depends(get_recommendation_service),
 ):
-    return service.recommend_merchants_by_prompt(request)
+    try:
+        results = service.recommend_merchants_by_prompt(request)
+    except Exception:
+        recommendation_metrics.record_prompt_request("merchants", "error")
+        raise
+    recommendation_metrics.record_prompt_request("merchants", "success")
+    recommendation_metrics.record_results("merchants", "prompt", len(results))
+    return results
 
 
 @router.get("/merchants", response_model=list[MerchantRecommendation])
@@ -40,7 +47,9 @@ def recommend_merchants(
     limit: int = Query(default=10, ge=1, le=50),
     service: RecommendationService = Depends(get_recommendation_service),
 ):
-    return service.recommend_merchants(user_id=user_id, campus=campus, limit=limit)
+    results = service.recommend_merchants(user_id=user_id, campus=campus, limit=limit)
+    recommendation_metrics.record_results("merchants", "history", len(results))
+    return results
 
 
 @router.post("/menus", response_model=list[MenuRecommendation])
@@ -48,7 +57,14 @@ def recommend_menus_by_prompt(
     request: MenuRecommendationRequest,
     service: RecommendationService = Depends(get_recommendation_service),
 ):
-    return service.recommend_menus_by_prompt(request)
+    try:
+        results = service.recommend_menus_by_prompt(request)
+    except Exception:
+        recommendation_metrics.record_prompt_request("menus", "error")
+        raise
+    recommendation_metrics.record_prompt_request("menus", "success")
+    recommendation_metrics.record_results("menus", "prompt", len(results))
+    return results
 
 
 @router.get("/menus", response_model=list[MenuRecommendation])
@@ -59,9 +75,11 @@ def recommend_menus(
     limit: int = Query(default=10, ge=1, le=50),
     service: RecommendationService = Depends(get_recommendation_service),
 ):
-    return service.recommend_menus(
+    results = service.recommend_menus(
         user_id=user_id,
         campus=campus,
         merchant_id=merchant_id,
         limit=limit,
     )
+    recommendation_metrics.record_results("menus", "history", len(results))
+    return results
