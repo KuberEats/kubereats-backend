@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: db-tools
+  labels:
+    app.kubernetes.io/part-of: kubereats
+    kubereats.io/access: internal-only
