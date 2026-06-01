@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
-from app.core.metrics import committee_merchant_approved_total, committee_merchant_rejected_total
+from app.core.metrics import (
+    committee_merchant_approved_total,
+    committee_merchant_rejected_total,
+)
 from app.database import get_db
 from app.models.kubereats import UserInfo
 from app.repo.committee_repo import CommitteeRepository
