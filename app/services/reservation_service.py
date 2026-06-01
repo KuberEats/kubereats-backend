@@ -80,6 +80,9 @@ class ReservationService:
                 service_date=reservation_data.service_date,
                 pickup_slot=pickup_slot,
                 pickup_option=reservation_data.pickup_option,
+                comments=self._normalize_optional_text(reservation_data.comments),
+                diner_name=self._normalize_optional_text(reservation_data.diner_name),
+                diner_phone=self._normalize_optional_text(reservation_data.diner_phone),
                 status="PENDING_RESERVATION",
                 idempotency_key=idempotency_key,
                 idempotency_request_hash=request_hash if idempotency_key else None,
@@ -448,6 +451,9 @@ class ReservationService:
             "service_date": reservation.service_date.isoformat(),
             "pickup_slot": reservation.pickup_slot or None,
             "pickup_option": reservation.pickup_option,
+            "comments": reservation.comments,
+            "diner_name": reservation.diner_name,
+            "diner_phone": reservation.diner_phone,
             "capacity_key": capacity_key,
             "items": [
                 {
@@ -510,6 +516,9 @@ class ReservationService:
             "pickup_slot": reservation.pickup_slot or None,
             "pickup_option": reservation.pickup_option,
             "pickup_number": None,
+            "comments": reservation.comments,
+            "diner_name": reservation.diner_name,
+            "diner_phone": reservation.diner_phone,
             "message": self._message_for_status(reservation.status),
             "items": items,
             "failed_items": failed_items,
@@ -541,11 +550,17 @@ class ReservationService:
     def _normalize_pickup_slot(self, pickup_slot: str | None):
         return pickup_slot.strip() if pickup_slot else ""
 
+    def _normalize_optional_text(self, value: str | None):
+        normalized = value.strip() if value else ""
+        return normalized or None
+
     def _generate_reservation_token(self):
         return token_urlsafe(24)
 
     def _hash_create_request(self, reservation_data: ReservationCreate):
         payload = reservation_data.model_dump(mode="json", by_alias=False)
         payload["pickup_slot"] = self._normalize_pickup_slot(payload["pickup_slot"])
+        for key in ("comments", "diner_name", "diner_phone"):
+            payload[key] = self._normalize_optional_text(payload.get(key))
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         return hashlib.sha256(encoded).hexdigest()
