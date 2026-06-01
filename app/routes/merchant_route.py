@@ -4,6 +4,12 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
+from app.core.metrics import (
+    merchant_apply_total,
+    merchant_menu_created_total,
+    merchant_menu_deleted_total,
+    merchant_orders_confirmed_total,
+)
 from app.database import get_db
 from app.models.kubereats import UserInfo
 from app.repo.merchant_repo import MerchantRepository
@@ -36,7 +42,9 @@ def apply_merchant(
     current_user: UserInfo = Depends(merchant_role),
     service: MerchantService = Depends(get_merchant_service),
 ):
-    return service.apply(current_user.id, data)
+    result = service.apply(current_user.id, data)
+    merchant_apply_total.inc()
+    return result
 
 
 @router.get("/me", response_model=MerchantResponse)
@@ -62,7 +70,9 @@ def create_menu_item(
     current_user: UserInfo = Depends(merchant_role),
     service: MerchantService = Depends(get_merchant_service),
 ):
-    return service.create_menu_item(current_user.id, data)
+    result = service.create_menu_item(current_user.id, data)
+    merchant_menu_created_total.inc()
+    return result
 
 
 @router.get("/menu", response_model=list[MenuResponse])
@@ -90,6 +100,7 @@ def delete_menu_item(
     service: MerchantService = Depends(get_merchant_service),
 ):
     service.delete_menu_item(current_user.id, menu_id)
+    merchant_menu_deleted_total.inc()
 
 
 @router.get("/orders/today", response_model=TodayOrderSummaryResponse)
@@ -105,7 +116,9 @@ def confirm_today_orders(
     current_user: UserInfo = Depends(merchant_role),
     service: MerchantService = Depends(get_merchant_service),
 ):
-    return service.confirm_today_orders(current_user.id)
+    result = service.confirm_today_orders(current_user.id)
+    merchant_orders_confirmed_total.inc()
+    return result
 
 
 @router.get("", response_model=list[PublicMerchantListItem])
