@@ -10,4 +10,4 @@ patches:
   - path: patch-service-nodeport.yaml
 images:
   - name: ghcr.io/kubereats/finance-service
-    newTag: 0d08e72
+    newTag: af87479
