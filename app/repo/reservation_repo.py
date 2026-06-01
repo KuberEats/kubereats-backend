@@ -95,7 +95,7 @@ class ReservationRepository:
                 )
             )
             .filter(ReservationRequest.id == reservation_id)
-            .with_for_update()
+            .with_for_update(of=ReservationRequest)
             .first()
         )
 
