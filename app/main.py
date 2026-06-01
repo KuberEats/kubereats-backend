@@ -9,6 +9,8 @@ import time
 import io
 import base64
 import barcode
+import redis
+import os
 from barcode.writer import ImageWriter
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
@@ -34,6 +36,37 @@ def health_check(db: Session = Depends(get_db)):
         return {"status": "healthy"}
     except Exception as e:
         raise HTTPException(status_code=503, detail="Unhealthy")
+
+@app.get("/grafanacheck")
+def grafana_check(db: Session = Depends(get_db)):
+    status = {
+        "status": "healthy",
+        "database": "connected",
+        "redis": "connected"
+    }
+    
+    # Check Database
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception as e:
+        status["database"] = "disconnected"
+        status["status"] = "unhealthy"
+        status["database_error"] = str(e)
+
+    # Check Redis
+    try:
+        redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+        r = redis.from_url(redis_url)
+        r.ping()
+    except Exception as e:
+        status["redis"] = "disconnected"
+        status["status"] = "unhealthy"
+        status["redis_error"] = str(e)
+
+    if status["status"] == "unhealthy":
+        raise HTTPException(status_code=503, detail=status)
+    
+    return status
 
 app.add_middleware(
     CORSMiddleware,

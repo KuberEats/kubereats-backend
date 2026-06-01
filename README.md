@@ -35,3 +35,12 @@ POST /api/tagging/generate-barcode/{user_id}
 Early prototype finance-like routes under `/api/merchant/*`, `/api/staff/*`,
 and `/api/finance/*` are deprecated/internal only and are not part of the public
 LB contract.
+
+## Grafana Expected
+```json
+{
+    "status": "healthy",
+    "database": "connected",
+    "redis": "connected"
+}
+```
