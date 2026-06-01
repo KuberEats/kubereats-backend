@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sonarqube-ui-private-access
+  labels:
+    app.kubernetes.io/name: sonarqube
+    app.kubernetes.io/part-of: kubereats
+    app.kubernetes.io/component: code-quality
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: sonarqube
+      app.kubernetes.io/part-of: kubereats
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 192.168.16.0/20
+      ports:
+        - protocol: TCP
+          port: 9000

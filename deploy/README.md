@@ -92,6 +92,22 @@ The service reads `DATABASE_URL` from `kubereats-db-app`. `OPENROUTER_API_KEY` m
 
 The service reads `DATABASE_URL` from `kubereats-db-app`. `order-scheduler-service-secret` is optional in dev because the current ConfigMap uses `QUEUE_BACKEND=fake` and `INTERNAL_TASK_AUTH_ENABLED=false`; if RabbitMQ or internal task auth is enabled later, provide `RABBITMQ_URL` and `INTERNAL_TASK_TOKEN` through that Secret.
 
+## SonarQube Dev UI
+
+SonarQube Community is deployed in `kubereats-dev` for code-quality UI access from the private on-prem network.
+
+| service | nodePort | UI path | access scope |
+| --- | ---: | --- | --- |
+| `sonarqube` | `31090` | `/` | `192.168.16.0/20` private network |
+
+Open the UI from an allowed private host:
+
+```text
+http://192.168.17.11:31090
+```
+
+The manifest includes a `NetworkPolicy` allowing ingress to the SonarQube pod only from `192.168.16.0/20`. Keep the node firewall and network routing scoped to the same private CIDR. This cluster currently has no StorageClass or PVs, so SonarQube uses `emptyDir` volumes and analysis data is lost if the pod is recreated. Add durable storage and an external database before treating this as production state.
+
 ## Phase 1.5 - GCP Load Balancer Hybrid NEG Mode
 
 Dev does not use Kubernetes Ingress in Phase 1.5. Public HTTPS and path routing are handled by the GCP External HTTPS Load Balancer. Kubernetes exposes fixed NodePorts on the worker nodes so GCP Hybrid NEG endpoints can target `WorkerInternalIP:NodePort`.
@@ -109,6 +125,7 @@ Phase 1.5 fixed NodePorts:
 | `finance-service` | `31085` | `/health` | `https://api.kubereats.click/finance/*` |
 | `recommendation-service` | `31086` | `/health` | `https://api.kubereats.click/recommendation/*` |
 | `order-scheduler-service` | `31087` | `/health` | `https://api.kubereats.click/order-scheduler/*` |
+| `sonarqube` | `31090` | `/api/system/status` | Private UI only, do not route publicly |
 
 Check Argo CD and services:
 
