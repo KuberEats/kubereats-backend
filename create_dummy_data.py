@@ -50,14 +50,12 @@ def seed():
             username="admin",
             hashed_password="fake_hashed_password",
             role="admin",
-            history_records="Initial admin user",
         )
 
         staff_user = UserInfo(
             username="staff01",
             hashed_password="fake_hashed_password",
             role="staff",
-            history_records="First staff user",
         )
 
         merchant_names = [
@@ -81,7 +79,6 @@ def seed():
                 username=f"merchant{index:02d}",
                 hashed_password="fake_hashed_password",
                 role="merchant",
-                history_records=f"{merchant_name} owner",
             )
             for index, merchant_name in enumerate(merchant_names, start=1)
         ]

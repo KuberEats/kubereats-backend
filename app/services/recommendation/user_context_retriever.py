@@ -35,7 +35,7 @@ class UserContextRetriever:
                     term_counter.update(tokenize(tag))
 
         tag_terms = {tag.name.lower() for tag in user.tags}
-        history_terms = tokenize(user.history_records or "")
+        history_terms = set()
         favorite_categories = {
             category for category, _ in category_counter.most_common(3)
         }
