@@ -74,6 +74,16 @@ def test_finance_prefixed_health_alias():
     assert response.json() == {"status": "ok"}
 
 
+def test_metrics_endpoint_exposes_finance_app_metrics():
+    client.get("/history")
+
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert "finance_http_requests_total" in response.text
+    assert "finance_settlement_queries_total" in response.text
+
+
 def test_merchant_domain_alias_is_not_exposed_from_finance_service():
     response = client.get("/api/merchant/monthly-total?merchant_id=1")
     assert response.status_code == 404

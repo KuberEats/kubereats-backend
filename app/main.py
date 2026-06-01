@@ -1,6 +1,9 @@
+import time
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import merchant, staff, finance
+from .metrics import metrics_response, record_http_request
 
 from contextlib import asynccontextmanager
 
@@ -11,6 +14,28 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="KubeEats Finance Microservice", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def metrics_middleware(request, call_next):
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    started_at = time.perf_counter()
+    response = None
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        status = response.status_code if response else 500
+        route = request.scope.get("route")
+        path = getattr(route, "path", request.url.path)
+        record_http_request(
+            request.method,
+            path,
+            status,
+            time.perf_counter() - started_at,
+        )
 
 # Add CORS middleware
 app.add_middleware(
@@ -66,3 +91,8 @@ def health_check():
 @app.get("/finance/health")
 def finance_health_check():
     return health_check()
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    return metrics_response()
