@@ -1,8 +1,6 @@
-from time import monotonic
-
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -14,7 +12,6 @@ from app.routes.auth_route import router as auth_router
 
 settings = get_settings()
 setup_logging()
-started_at = monotonic()
 
 if settings.auto_create_tables:
     Base.metadata.create_all(bind=engine)
@@ -69,14 +66,6 @@ def readyz():
     return {"status": "ready"}
 
 
-@app.get("/metrics", response_class=PlainTextResponse)
+@app.get("/metrics")
 def metrics():
-    uptime_seconds = monotonic() - started_at
-    return (
-        "# HELP verification_up Service health status.\n"
-        "# TYPE verification_up gauge\n"
-        "verification_up 1\n"
-        "# HELP verification_uptime_seconds Service uptime in seconds.\n"
-        "# TYPE verification_uptime_seconds gauge\n"
-        f"verification_uptime_seconds {uptime_seconds:.0f}\n"
-    )
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

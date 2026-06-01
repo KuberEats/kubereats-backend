@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
+from app.core.metrics import auth_login_total, auth_register_total, auth_token_refresh_total
 from app.database import get_db
 from app.models.kubereats import UserInfo
 from app.repo.user_repo import UserRepository
@@ -26,7 +27,9 @@ def register(
     data: RegisterRequest,
     service: AuthService = Depends(get_auth_service),
 ):
-    return service.register(data)
+    result = service.register(data)
+    auth_register_total.inc()
+    return result
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -34,7 +37,9 @@ def login(
     data: LoginRequest,
     service: AuthService = Depends(get_auth_service),
 ):
-    return service.login(data.username, data.password)
+    result = service.login(data.username, data.password)
+    auth_login_total.labels(outcome="success").inc()
+    return result
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -42,7 +47,9 @@ def refresh_token(
     data: RefreshRequest,
     service: AuthService = Depends(get_auth_service),
 ):
-    return service.refresh(data.refresh_token)
+    result = service.refresh(data.refresh_token)
+    auth_token_refresh_total.labels(outcome="success").inc()
+    return result
 
 
 @router.get("/me", response_model=UserResponse)
