@@ -279,7 +279,7 @@ jobs:
                   continue
 
               text = path.read_text()
-              if "\\n" in text and "\n" not in text:
+              if "\\n" in text.splitlines()[0]:
                   text = text.replace("\\n", "\n")
               lines = text.splitlines()
               out = []
