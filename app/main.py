@@ -27,6 +27,12 @@ app.add_middleware(
 app.include_router(order_router)
 app.include_router(reservation_router)
 app.include_router(internal_task_router)
+app.include_router(order_router, prefix="/order-scheduler", include_in_schema=False)
+app.include_router(
+    reservation_router,
+    prefix="/order-scheduler",
+    include_in_schema=False,
+)
 
 
 @app.get("/")
