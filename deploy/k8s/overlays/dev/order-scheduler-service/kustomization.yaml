@@ -7,3 +7,6 @@ patches:
   - path: patch-env.yaml
   - path: patch-replicas.yaml
   - path: patch-image.yaml
+images:
+  - name: ghcr.io/kubereats/order-scheduler-service
+    newTag: d36032e
