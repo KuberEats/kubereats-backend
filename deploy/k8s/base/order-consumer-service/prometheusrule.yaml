@@ -1,0 +1,42 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: order-consumer-service-alerts
+  labels:
+    app.kubernetes.io/name: order-consumer-service
+    app.kubernetes.io/part-of: kubereats
+    app.kubernetes.io/component: worker
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: kubereats.order-consumer-service
+      rules:
+        - alert: KubereatsOrderConsumerTargetDown
+          expr: up{service="order-consumer-service"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            service: order-consumer-service
+          annotations:
+            summary: Order Consumer metrics target is down
+            description: Prometheus cannot scrape Order Consumer metrics for pod {{ $labels.pod }}.
+
+        - alert: KubereatsOrderConsumerPodUnavailable
+          expr: kube_deployment_status_replicas_available{deployment="order-consumer-service"} < 1
+          for: 5m
+          labels:
+            severity: critical
+            service: order-consumer-service
+          annotations:
+            summary: Order Consumer has no available pods
+            description: Order Consumer deployment has no available replicas for at least 5 minutes.
+
+        - alert: KubereatsOrderConsumerReservationFailures
+          expr: increase(order_consumer_reservation_failed_total[10m]) > 0
+          for: 10m
+          labels:
+            severity: warning
+            service: order-consumer-service
+          annotations:
+            summary: Order Consumer reservation processing is failing
+            description: Order Consumer has reservation processing failures in the last 10 minutes.

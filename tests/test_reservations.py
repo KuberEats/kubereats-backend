@@ -12,6 +12,9 @@ from app.database import Base
 from app.models.kubereats import (
     Menu,
     MerchantInfo,
+    Finance,
+    Order,
+    OrderItem,
     ReservationCapacitySlot,
     ReservationOutboxEvent,
     ReservationRequest,
@@ -209,6 +212,12 @@ def test_worker_reserves_capacity_and_updates_to_reserved(db):
     reservation = db.query(ReservationRequest).one()
     assert reservation.status == "RESERVED"
     assert capacity_slot(db).reserved_count == 2
+    order = db.query(Order).one()
+    assert order.user_id == reservation.user_id
+    assert order.service_date == reservation.service_date
+    assert order.idempotency_key == f"reservation:{reservation.reservation_token}"
+    assert db.query(OrderItem).one().quantity == 2
+    assert db.query(Finance).count() == 1
 
 
 def test_get_reservation_returns_reserved_after_worker_success(db):
@@ -261,6 +270,8 @@ def test_duplicate_event_delivery_does_not_reserve_capacity_twice(db):
 
     assert db.query(ReservationRequest).one().status == "RESERVED"
     assert capacity_slot(db).reserved_count == 2
+    assert db.query(Order).count() == 1
+    assert db.query(OrderItem).count() == 1
 
 
 def test_concurrent_reservation_processing_never_exceeds_capacity(session_factory):
@@ -374,3 +385,4 @@ def test_db_polling_fallback_processes_pending_reservations(db):
     assert result == {"processed": 1, "failed": 0}
     assert db.query(ReservationRequest).one().status == "RESERVED"
     assert capacity_slot(db).reserved_count == 1
+    assert db.query(Order).count() == 1

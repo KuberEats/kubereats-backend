@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-consumer-service
+  labels:
+    app.kubernetes.io/name: order-consumer-service
+    app.kubernetes.io/part-of: kubereats
+    app.kubernetes.io/component: worker
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-consumer-service
+      app.kubernetes.io/part-of: kubereats
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true

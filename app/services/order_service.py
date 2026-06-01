@@ -9,7 +9,13 @@ from uuid import uuid4
 from fastapi import HTTPException
 
 from app.config import Settings, get_settings
-from app.models.kubereats import Finance, Order, OrderItem, OutboxEvent
+from app.models.kubereats import (
+    Finance,
+    Order,
+    OrderItem,
+    OutboxEvent,
+    ReservationRequest,
+)
 from app.repo.menu_repo import MenuRepository
 from app.repo.order_repo import OrderRepository
 from app.schemas.order import OrderCreate, OrderHistorySortKey
@@ -131,6 +137,75 @@ class OrderService:
                     )
                 raise
             self.order_repo.rollback()
+            raise
+
+    def create_order_from_reservation(
+        self,
+        reservation: ReservationRequest,
+        *,
+        commit: bool = True,
+    ):
+        idempotency_key = f"reservation:{reservation.reservation_token}"
+        request_hash = self._hash_reservation_order_request(reservation)
+        existing = self.order_repo.get_by_user_id_and_idempotency_key(
+            reservation.user_id,
+            idempotency_key,
+        )
+        if existing:
+            if existing.idempotency_request_hash != request_hash:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Reservation order idempotency payload changed",
+                )
+            return self.get_order_by_id(existing.id)
+
+        menu_quantity_map = self._reservation_item_quantities(reservation)
+        menus = self._load_menus(menu_quantity_map)
+        total_amount = self._calculate_total_amount(menu_quantity_map, menus)
+
+        try:
+            order = self.order_repo.create_order(
+                Order(
+                    user_id=reservation.user_id,
+                    total_amount=total_amount,
+                    order_status=0,
+                    service_date=reservation.service_date,
+                    schedule_status="not_scheduled",
+                    idempotency_key=idempotency_key,
+                    idempotency_request_hash=request_hash,
+                )
+            )
+            order.order_number = self._generate_order_number(
+                order.id,
+                reservation.service_date,
+            )
+            self.order_repo.flush()
+
+            order_items = [
+                OrderItem(
+                    order_id=order.id,
+                    menu_id=menu.id,
+                    quantity=menu_quantity_map[menu.id],
+                    unit_price=menu.price,
+                    subtotal=menu.price * menu_quantity_map[menu.id],
+                )
+                for menu in menus.values()
+            ]
+            self.order_repo.create_order_items(order_items)
+
+            finance_records = self._build_finance_records(
+                order.id,
+                menu_quantity_map,
+                menus,
+            )
+            self.order_repo.create_finance_records(finance_records)
+
+            if commit:
+                self.order_repo.commit()
+            return self.get_order_by_id(order.id)
+        except Exception:
+            if commit:
+                self.order_repo.rollback()
             raise
 
     def get_order_by_id(self, order_id: int):
@@ -266,6 +341,12 @@ class OrderService:
         for item in order_data.items:
             menu_quantity_map[item.menu_id] += item.quantity
 
+        return dict(menu_quantity_map)
+
+    def _reservation_item_quantities(self, reservation: ReservationRequest):
+        menu_quantity_map = defaultdict(int)
+        for item in reservation.items:
+            menu_quantity_map[item.menu_item_id] += item.quantity
         return dict(menu_quantity_map)
 
     def _load_menus(self, menu_quantity_map: dict[int, int]):
@@ -450,6 +531,26 @@ class OrderService:
 
     def _hash_order_request(self, order_data: OrderCreate):
         payload = order_data.model_dump(mode="json", by_alias=False)
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _hash_reservation_order_request(self, reservation: ReservationRequest):
+        payload = {
+            "reservation_id": reservation.id,
+            "reservation_token": reservation.reservation_token,
+            "user_id": reservation.user_id,
+            "merchant_id": reservation.merchant_id,
+            "service_date": reservation.service_date.isoformat(),
+            "pickup_slot": reservation.pickup_slot,
+            "pickup_option": reservation.pickup_option,
+            "items": [
+                {
+                    "menu_item_id": item.menu_item_id,
+                    "quantity": item.quantity,
+                }
+                for item in sorted(reservation.items, key=lambda item: item.menu_item_id)
+            ],
+        }
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         return hashlib.sha256(encoded).hexdigest()
 

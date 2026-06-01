@@ -15,8 +15,11 @@ from app.models.kubereats import (
     ReservationRequest,
     ReservationRequestItem,
 )
+from app.repo.menu_repo import MenuRepository
+from app.repo.order_repo import OrderRepository
 from app.repo.reservation_repo import ReservationRepository
 from app.schemas.reservation import ReservationCreate
+from app.services.order_service import OrderService
 
 logger = logging.getLogger(__name__)
 
@@ -281,6 +284,7 @@ class ReservationService:
             reservation.processed_at = now
             reservation.lease_until = None
             reservation.failure_reason = None
+            self._create_order_for_reservation(reservation)
             self.reservation_repo.commit()
             logger.info(
                 "reservation_reserved",
@@ -352,6 +356,14 @@ class ReservationService:
                 }
             )
         self.reservation_repo.ensure_capacity_slots(rows)
+
+    def _create_order_for_reservation(self, reservation: ReservationRequest):
+        order_service = OrderService(
+            order_repo=OrderRepository(self.reservation_repo.db),
+            menu_repo=MenuRepository(self.reservation_repo.db),
+            settings=self.settings,
+        )
+        order_service.create_order_from_reservation(reservation, commit=False)
 
     def _validate_user_and_merchant(self, reservation_data: ReservationCreate):
         user = self.reservation_repo.get_user_by_id(reservation_data.user_id)

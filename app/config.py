@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     reservation_processing_lease_seconds: int = 300
     reservation_db_polling_batch_size: int = 25
     order_consumer_poll_interval_seconds: float = 2.0
+    order_consumer_metrics_address: str = "0.0.0.0"
+    order_consumer_metrics_port: int = 9100
 
     @property
     def cors_origins(self) -> list[str]:
