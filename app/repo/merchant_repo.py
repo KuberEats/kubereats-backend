@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
@@ -79,7 +79,9 @@ class MerchantRepository:
 
     # ── Order Summary ──
 
-    def get_today_order_summary(self, merchant_id: int, target_date: date):
+    def get_today_order_summary(
+        self, merchant_id: int, day_start: datetime, day_end: datetime
+    ):
         results = (
             self.db.query(
                 OrderItem.menu_id,
@@ -91,7 +93,8 @@ class MerchantRepository:
             .join(Order, OrderItem.order_id == Order.id)
             .filter(
                 Menu.merchant_id == merchant_id,
-                func.date(Order.order_time) == target_date,
+                Order.order_time >= day_start,
+                Order.order_time < day_end,
                 Order.order_status != 2,
             )
             .group_by(OrderItem.menu_id, Menu.item_name)
@@ -100,7 +103,7 @@ class MerchantRepository:
         return results
 
     def get_today_pending_orders(
-        self, merchant_id: int, target_date: date
+        self, merchant_id: int, day_start: datetime, day_end: datetime
     ) -> list[Order]:
         return (
             self.db.query(Order)
@@ -108,7 +111,8 @@ class MerchantRepository:
             .join(Menu, OrderItem.menu_id == Menu.id)
             .filter(
                 Menu.merchant_id == merchant_id,
-                func.date(Order.order_time) == target_date,
+                Order.order_time >= day_start,
+                Order.order_time < day_end,
                 Order.order_status == 0,
             )
             .distinct()

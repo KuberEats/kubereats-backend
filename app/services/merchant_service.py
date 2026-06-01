@@ -1,9 +1,12 @@
 from datetime import date
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 
+from app.core.config import get_settings
+from app.core.time import day_bounds, today_in_tz
 from app.models.kubereats import Menu, MerchantInfo
 from app.repo.merchant_repo import MerchantRepository
+from app.services.image_service import ImageService
 from app.schemas.merchant import (
     MerchantApplyRequest,
     MerchantSortKey,
@@ -113,7 +116,7 @@ class MerchantService:
                 item_name=data.item_name,
                 price=data.price,
                 max_daily_quantity=data.max_daily_quantity,
-                image_id=data.image_id,
+                image_url=data.image_url,
             )
         )
         self.merchant_repo.commit()
@@ -144,12 +147,22 @@ class MerchantService:
         self.merchant_repo.delete_menu(menu)
         self.merchant_repo.commit()
 
+    def upload_menu_image(
+        self, user_id: int, file: UploadFile, image_service: ImageService
+    ) -> str:
+        merchant = self._get_approved_merchant(user_id)
+        return image_service.upload_menu_image(file, merchant.id)
+
     # ── Order Summary ──
 
     def get_today_order_summary(self, user_id: int) -> dict:
         merchant = self._get_approved_merchant(user_id)
-        today = date.today()
-        results = self.merchant_repo.get_today_order_summary(merchant.id, today)
+        tz_name = get_settings().timezone
+        today = today_in_tz(tz_name)
+        day_start, day_end = day_bounds(today, tz_name)
+        results = self.merchant_repo.get_today_order_summary(
+            merchant.id, day_start, day_end
+        )
 
         items = [
             {
@@ -170,8 +183,12 @@ class MerchantService:
 
     def confirm_today_orders(self, user_id: int) -> dict:
         merchant = self._get_approved_merchant(user_id)
-        today = date.today()
-        orders = self.merchant_repo.get_today_pending_orders(merchant.id, today)
+        tz_name = get_settings().timezone
+        today = today_in_tz(tz_name)
+        day_start, day_end = day_bounds(today, tz_name)
+        orders = self.merchant_repo.get_today_pending_orders(
+            merchant.id, day_start, day_end
+        )
         for order in orders:
             order.order_status = 1
         self.merchant_repo.commit()

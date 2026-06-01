@@ -1,6 +1,6 @@
 from datetime import date as Date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
@@ -21,10 +21,12 @@ from app.schemas.merchant import (
     MerchantResponse,
     MerchantUpdateRequest,
     MenuCreateRequest,
+    MenuImageUploadResponse,
     MenuResponse,
     MenuUpdateRequest,
     TodayOrderSummaryResponse,
 )
+from app.services.image_service import ImageService, get_image_service
 from app.services.merchant_service import MerchantService
 
 router = APIRouter(prefix="/merchants", tags=["Merchants"])
@@ -73,6 +75,17 @@ def create_menu_item(
     result = service.create_menu_item(current_user.id, data)
     merchant_menu_created_total.inc()
     return result
+
+
+@router.post("/menu/images", response_model=MenuImageUploadResponse, status_code=201)
+def upload_menu_image(
+    file: UploadFile,
+    current_user: UserInfo = Depends(merchant_role),
+    service: MerchantService = Depends(get_merchant_service),
+    image_service: ImageService = Depends(get_image_service),
+):
+    image_url = service.upload_menu_image(current_user.id, file, image_service)
+    return MenuImageUploadResponse(image_url=image_url)
 
 
 @router.get("/menu", response_model=list[MenuResponse])

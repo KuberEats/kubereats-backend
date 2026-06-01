@@ -51,6 +51,7 @@ k8s/
 | GET | `/merchants/me` | 取得商家資訊 | merchant role |
 | PUT | `/merchants/me` | 更新商家資訊 | merchant role |
 | POST | `/merchants/menu` | 新增菜品 | merchant role（已核准）|
+| POST | `/merchants/menu/images` | 上傳菜品圖片（回傳 imageUrl） | merchant role（已核准）|
 | GET | `/merchants/menu` | 列出自己的菜品 | merchant role |
 | PUT | `/merchants/menu/{id}` | 更新菜品 | merchant role（已核准）|
 | DELETE | `/merchants/menu/{id}` | 刪除菜品 | merchant role（已核准）|
@@ -133,6 +134,12 @@ uv run uvicorn app.main:app --reload
 | `DATABASE_URL` | PostgreSQL 連線字串 | `postgresql://localhost/kubereats` |
 | `JWT_SECRET_KEY` | JWT 密鑰（需與 auth-service 一致） | `dev-secret-key` |
 | `JWT_ALGORITHM` | JWT 演算法 | `HS256` |
+| `TIMEZONE` | 業務時區（定義「今日訂單」的日界） | `Asia/Taipei` |
+| `MINIO_ENDPOINT` | MinIO 連線端點（服務上傳用） | `http://localhost:9000` |
+| `MINIO_ACCESS_KEY` | MinIO access key | （空） |
+| `MINIO_SECRET_KEY` | MinIO secret key | （空） |
+| `MINIO_BUCKET` | 存放菜品圖片的 bucket | `kubereats` |
+| `MINIO_PUBLIC_URL` | 圖片連結的對外網址（空則沿用 endpoint） | （空） |
 
 > **注意**：`JWT_SECRET_KEY` 必須與 auth-service 使用相同的值，否則 token 驗證會失敗。
 

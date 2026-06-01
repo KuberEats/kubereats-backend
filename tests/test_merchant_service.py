@@ -257,6 +257,46 @@ def test_delete_menu_item_not_found_raises_404(merchant_service, approved_mercha
     assert exc.value.status_code == 404
 
 
+# ── Menu Image Upload ──
+
+
+class _FakeImageService:
+    """Records the merchant_id it was called with and returns a fixed URL."""
+
+    def __init__(self):
+        self.called_with_merchant_id = None
+
+    def upload_menu_image(self, file, merchant_id):
+        self.called_with_merchant_id = merchant_id
+        return f"http://minio/kubereats/{merchant_id}/test.jpg"
+
+
+def test_create_menu_item_persists_image_url(merchant_service, approved_merchant):
+    data = MenuCreateRequest(
+        item_name="Ramen",
+        price=Decimal("150"),
+        max_daily_quantity=10,
+        image_url="http://minio/kubereats/1/ramen.jpg",
+    )
+    result = merchant_service.create_menu_item(approved_merchant.user_id, data)
+    assert result.image_url == "http://minio/kubereats/1/ramen.jpg"
+
+
+def test_upload_menu_image_uses_merchant_id(merchant_service, approved_merchant):
+    fake = _FakeImageService()
+    url = merchant_service.upload_menu_image(approved_merchant.user_id, None, fake)
+    assert fake.called_with_merchant_id == approved_merchant.id
+    assert url == f"http://minio/kubereats/{approved_merchant.id}/test.jpg"
+
+
+def test_upload_menu_image_not_approved_raises_403(merchant_service, test_merchant):
+    fake = _FakeImageService()
+    with pytest.raises(HTTPException) as exc:
+        merchant_service.upload_menu_image(test_merchant.user_id, None, fake)
+    assert exc.value.status_code == 403
+    assert fake.called_with_merchant_id is None
+
+
 # ── Confirm Today Orders ──
 
 

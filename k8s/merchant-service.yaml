@@ -5,6 +5,14 @@ metadata:
   name: merchant-service-config
 data:
   JWT_ALGORITHM: "HS256"
+  # Business timezone used to define "today" for order summaries/confirmation.
+  TIMEZONE: "Asia/Taipei"
+  # In-cluster endpoint the service uploads through.
+  MINIO_ENDPOINT: "http://minio:9000"
+  MINIO_BUCKET: "kubereats"
+  # Browser-facing base URL stored in image links. Point this at your
+  # external MinIO ingress, e.g. "https://minio.your-domain.com".
+  MINIO_PUBLIC_URL: "http://minio:9000"
 ---
 # ── Secret ───────────────────────────────────────────────────────────────────
 # IMPORTANT: change all values before deploying to production.
@@ -16,6 +24,8 @@ type: Opaque
 stringData:
   DATABASE_URL: "postgresql://user:password@postgres:5432/kubereats_merchant"
   JWT_SECRET_KEY: "change-me-in-production"
+  MINIO_ACCESS_KEY: "change-me-in-production"
+  MINIO_SECRET_KEY: "change-me-in-production"
 ---
 # ── Deployment ───────────────────────────────────────────────────────────────
 apiVersion: apps/v1

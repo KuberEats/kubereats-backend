@@ -117,9 +117,10 @@ class MenuCreateRequest(BaseModel):
         gt=0,
         validation_alias=AliasChoices("max_daily_quantity", "maxDailyQuantity"),
     )
-    image_id: str | None = Field(
+    image_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("image_id", "imageId"),
+        max_length=512,
+        validation_alias=AliasChoices("image_url", "imageUrl"),
     )
 
 
@@ -137,9 +138,10 @@ class MenuUpdateRequest(BaseModel):
         gt=0,
         validation_alias=AliasChoices("max_daily_quantity", "maxDailyQuantity"),
     )
-    image_id: str | None = Field(
+    image_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("image_id", "imageId"),
+        max_length=512,
+        validation_alias=AliasChoices("image_url", "imageUrl"),
     )
 
 
@@ -151,9 +153,15 @@ class MenuResponse(BaseModel):
     item_name: str = Field(serialization_alias="itemName")
     price: float
     max_daily_quantity: int = Field(serialization_alias="maxDailyQuantity")
-    image_id: str | None = Field(default=None, serialization_alias="imageId")
+    image_url: str | None = Field(default=None, serialization_alias="imageUrl")
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class MenuImageUploadResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    image_url: str = Field(serialization_alias="imageUrl")
 
 
 # ── Order Summary ──
