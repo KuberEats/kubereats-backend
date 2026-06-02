@@ -135,13 +135,15 @@ uv run uvicorn app.main:app --reload
 | `JWT_SECRET_KEY` | JWT 密鑰（需與 auth-service 一致） | `dev-secret-key` |
 | `JWT_ALGORITHM` | JWT 演算法 | `HS256` |
 | `TIMEZONE` | 業務時區（定義「今日訂單」的日界） | `Asia/Taipei` |
-| `MINIO_ENDPOINT` | MinIO 連線端點（服務上傳用） | `http://localhost:9000` |
-| `MINIO_ACCESS_KEY` | MinIO access key | （空） |
-| `MINIO_SECRET_KEY` | MinIO secret key | （空） |
-| `MINIO_BUCKET` | 存放菜品圖片的 bucket | `kubereats` |
-| `MINIO_PUBLIC_URL` | 圖片連結的對外網址（空則沿用 endpoint） | （空） |
+| `GCS_BUCKET` | 存放菜品圖片的 GCS bucket（需開放 allUsers objectViewer） | `kubereats-menu-images` |
+| `GCP_PROJECT` | GCP 專案 ID（留空則由憑證推斷） | （空） |
+| `GOOGLE_APPLICATION_CREDENTIALS` | service-account 金鑰 JSON 路徑（地端認證用） | （空） |
 
 > **注意**：`JWT_SECRET_KEY` 必須與 auth-service 使用相同的值，否則 token 驗證會失敗。
+
+> **圖片儲存**：菜品圖片上傳至 GCP Cloud Storage，回傳公開 URL `https://storage.googleapis.com/<bucket>/<merchant_id>/<uuid>.<ext>`。
+> bucket 需授予 `allUsers` 的 `roles/storage.objectViewer` 才能讓瀏覽器直接讀取。
+> 地端 K8s 無法使用 Workload Identity，須將 service-account 金鑰 JSON 以 Secret 掛載，並用 `GOOGLE_APPLICATION_CREDENTIALS` 指向它。
 
 ## Testing
 
@@ -159,9 +161,14 @@ uv run pytest tests/ -v
 # 1. 替換 k8s/merchant-service.yaml 裡的 image 路徑
 #    image: asia-east1-docker.pkg.dev/PROJECT_ID/kubereats/merchant-service:latest
 
-# 2. 更新 Secret 裡的 DATABASE_URL 和 JWT_SECRET_KEY
+# 2. 更新 Secret 裡的 DATABASE_URL 和 JWT_SECRET_KEY，
+#    並在 ConfigMap 設定 GCS_BUCKET / GCP_PROJECT
 
-# 3. 套用設定
+# 3. 用下載的 service-account 金鑰建立 Secret（不要把金鑰 commit 進 repo）
+kubectl create secret generic merchant-gcp-sa-key \
+  --from-file=key.json=/path/to/your-sa-key.json
+
+# 4. 套用設定
 kubectl apply -f k8s/merchant-service.yaml
 ```
 

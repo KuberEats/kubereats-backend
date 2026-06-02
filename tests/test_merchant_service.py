@@ -268,25 +268,29 @@ class _FakeImageService:
 
     def upload_menu_image(self, file, merchant_id):
         self.called_with_merchant_id = merchant_id
-        return f"http://minio/kubereats/{merchant_id}/test.jpg"
+        return f"https://storage.googleapis.com/kubereats-menu-images/{merchant_id}/test.jpg"
 
 
 def test_create_menu_item_persists_image_url(merchant_service, approved_merchant):
+    image_url = "https://storage.googleapis.com/kubereats-menu-images/1/ramen.jpg"
     data = MenuCreateRequest(
         item_name="Ramen",
         price=Decimal("150"),
         max_daily_quantity=10,
-        image_url="http://minio/kubereats/1/ramen.jpg",
+        image_url=image_url,
     )
     result = merchant_service.create_menu_item(approved_merchant.user_id, data)
-    assert result.image_url == "http://minio/kubereats/1/ramen.jpg"
+    assert result.image_url == image_url
 
 
 def test_upload_menu_image_uses_merchant_id(merchant_service, approved_merchant):
     fake = _FakeImageService()
     url = merchant_service.upload_menu_image(approved_merchant.user_id, None, fake)
     assert fake.called_with_merchant_id == approved_merchant.id
-    assert url == f"http://minio/kubereats/{approved_merchant.id}/test.jpg"
+    assert url == (
+        f"https://storage.googleapis.com/kubereats-menu-images/"
+        f"{approved_merchant.id}/test.jpg"
+    )
 
 
 def test_upload_menu_image_not_approved_raises_403(merchant_service, test_merchant):

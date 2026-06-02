@@ -1,10 +1,9 @@
 import uuid
 from functools import lru_cache
 
-import boto3
-from botocore.client import Config
-from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import HTTPException, UploadFile, status
+from google.api_core.exceptions import GoogleAPIError
+from google.cloud import storage
 
 from app.core.config import get_settings
 
@@ -18,28 +17,18 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
 
 
 class ImageService:
-    """Uploads menu images to MinIO (S3-compatible) and returns public URLs."""
+    """Uploads menu images to GCP Cloud Storage and returns public URLs.
+
+    Authentication uses Application Default Credentials: on GKE this is
+    Workload Identity, on-prem it is the service-account key file pointed to by
+    the GOOGLE_APPLICATION_CREDENTIALS environment variable.
+    """
 
     def __init__(self):
         settings = get_settings()
-        self._bucket = settings.minio_bucket
-        self._public_url = (
-            settings.minio_public_url or settings.minio_endpoint
-        ).rstrip("/")
-        self._client = boto3.client(
-            "s3",
-            endpoint_url=settings.minio_endpoint,
-            aws_access_key_id=settings.minio_access_key,
-            aws_secret_access_key=settings.minio_secret_key,
-            config=Config(signature_version="s3v4"),
-            region_name="us-east-1",
-        )
-
-    def _ensure_bucket(self) -> None:
-        try:
-            self._client.head_bucket(Bucket=self._bucket)
-        except ClientError:
-            self._client.create_bucket(Bucket=self._bucket)
+        self._bucket_name = settings.gcs_bucket
+        self._client = storage.Client(project=settings.gcp_project or None)
+        self._bucket = self._client.bucket(self._bucket_name)
 
     def upload_menu_image(self, file: UploadFile, merchant_id: int) -> str:
         ext = ALLOWED_CONTENT_TYPES.get(file.content_type or "")
@@ -63,23 +52,20 @@ class ImageService:
 
         key = f"{merchant_id}/{uuid.uuid4().hex}.{ext}"
         try:
-            self._ensure_bucket()
-            self._client.put_object(
-                Bucket=self._bucket,
-                Key=key,
-                Body=content,
-                ContentType=file.content_type,
-            )
-        except (BotoCoreError, ClientError) as exc:
+            blob = self._bucket.blob(key)
+            blob.upload_from_string(content, content_type=file.content_type)
+        except GoogleAPIError as exc:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Failed to upload image to storage.",
             ) from exc
 
-        return f"{self._public_url}/{self._bucket}/{key}"
+        # Bucket grants allUsers objectViewer, so this public URL is readable
+        # directly by the browser without signing.
+        return f"https://storage.googleapis.com/{self._bucket_name}/{key}"
 
 
 @lru_cache
 def get_image_service() -> ImageService:
-    """Cached singleton so the boto3 client is reused across requests."""
+    """Cached singleton so the storage client is reused across requests."""
     return ImageService()

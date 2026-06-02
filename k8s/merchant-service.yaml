@@ -7,12 +7,12 @@ data:
   JWT_ALGORITHM: "HS256"
   # Business timezone used to define "today" for order summaries/confirmation.
   TIMEZONE: "Asia/Taipei"
-  # In-cluster endpoint the service uploads through.
-  MINIO_ENDPOINT: "http://minio:9000"
-  MINIO_BUCKET: "kubereats"
-  # Browser-facing base URL stored in image links. Point this at your
-  # external MinIO ingress, e.g. "https://minio.your-domain.com".
-  MINIO_PUBLIC_URL: "http://minio:9000"
+  # GCS bucket for menu images. Grant allUsers objectViewer so the returned
+  # https://storage.googleapis.com/<bucket>/<key> URLs are publicly readable.
+  GCS_BUCKET: "kubereats-menu-images"
+  GCP_PROJECT: "your-gcp-project-id"
+  # Path where the service-account key is mounted (see Deployment volume).
+  GOOGLE_APPLICATION_CREDENTIALS: "/var/secrets/gcp/key.json"
 ---
 # ── Secret ───────────────────────────────────────────────────────────────────
 # IMPORTANT: change all values before deploying to production.
@@ -24,8 +24,25 @@ type: Opaque
 stringData:
   DATABASE_URL: "postgresql://user:password@postgres:5432/kubereats_merchant"
   JWT_SECRET_KEY: "change-me-in-production"
-  MINIO_ACCESS_KEY: "change-me-in-production"
-  MINIO_SECRET_KEY: "change-me-in-production"
+---
+# ── GCP service-account key (object storage credentials) ─────────────────────
+# On-prem clusters can't use Workload Identity, so the pod authenticates to
+# Cloud Storage with a service-account key mounted as a file. Do NOT commit a
+# real key — create this secret out-of-band from your downloaded JSON:
+#
+#   kubectl create secret generic merchant-gcp-sa-key \
+#     --from-file=key.json=/path/to/your-sa-key.json
+#
+# The placeholder below lets `kubectl apply -f` succeed; replace it in your
+# real environment (or skip it and run the command above instead).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: merchant-gcp-sa-key
+type: Opaque
+stringData:
+  key.json: |
+    { "REPLACE_ME": "run the kubectl create secret command above" }
 ---
 # ── Deployment ───────────────────────────────────────────────────────────────
 apiVersion: apps/v1
@@ -58,6 +75,11 @@ spec:
                 name: merchant-service-config
             - secretRef:
                 name: merchant-service-secret
+          volumeMounts:
+            # Service-account key consumed via GOOGLE_APPLICATION_CREDENTIALS.
+            - name: gcp-sa-key
+              mountPath: /var/secrets/gcp
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /health/live
@@ -77,6 +99,10 @@ spec:
             limits:
               cpu: "500m"
               memory: "256Mi"
+      volumes:
+        - name: gcp-sa-key
+          secret:
+            secretName: merchant-gcp-sa-key
 ---
 # ── Service ──────────────────────────────────────────────────────────────────
 apiVersion: v1

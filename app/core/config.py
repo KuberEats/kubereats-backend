@@ -13,15 +13,14 @@ class Settings(BaseSettings):
     # Business timezone used to define a calendar day (e.g. "today's orders").
     timezone: str = "Asia/Taipei"
 
-    # ── MinIO / object storage ──
-    minio_endpoint: str = "http://localhost:9000"
-    minio_access_key: str = ""
-    minio_secret_key: str = ""
-    minio_bucket: str = "kubereats"
-    # Public base URL for building image links. Falls back to minio_endpoint
-    # when empty (useful when the browser-facing host differs from the
-    # in-cluster endpoint the service uploads through).
-    minio_public_url: str = ""
+    # ── GCP Cloud Storage (menu images) ──
+    # Bucket must grant allUsers objectViewer so uploaded objects are publicly
+    # readable at https://storage.googleapis.com/<bucket>/<key>.
+    gcs_bucket: str = "kubereats-menu-images"
+    # GCP project id. Leave empty to let the credentials/ADC infer it.
+    gcp_project: str = ""
+    # Credentials are resolved via Application Default Credentials. On-prem,
+    # set GOOGLE_APPLICATION_CREDENTIALS to the mounted service-account key.
 
 
 @lru_cache

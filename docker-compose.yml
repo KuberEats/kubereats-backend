@@ -12,33 +12,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9000:9000"   # S3 API (browser loads images from here)
-      - "9001:9001"   # Web console (browse buckets/objects)
-    volumes:
-      - minio_data:/data
-
-  # One-shot: wait for MinIO, create the bucket, make it publicly readable.
-  minio-init:
-    image: minio/mc:latest
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 minioadmin minioadmin; do
-        echo 'waiting for minio...'; sleep 2;
-      done;
-      mc mb --ignore-existing local/kubereats;
-      mc anonymous set download local/kubereats;
-      echo 'bucket kubereats ready (public read)';
-      "
-
   merchant-api:
     build: .
     command: sh -c "uv run python scripts/migrate.py && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
@@ -47,21 +20,21 @@ services:
       JWT_SECRET_KEY: dev-secret-key
       JWT_ALGORITHM: HS256
       TIMEZONE: Asia/Taipei
-      # Backend uploads through the in-network endpoint...
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET: kubereats
-      # ...but image URLs must be reachable from the browser.
-      MINIO_PUBLIC_URL: http://localhost:9000
+      # Menu images go to a real GCS bucket. Create one with allUsers
+      # objectViewer and download a service-account key for local dev.
+      GCS_BUCKET: kubereats-menu-images
+      GCP_PROJECT: ""
+      # Mount your key at this path (see volumes below).
+      GOOGLE_APPLICATION_CREDENTIALS: /var/secrets/gcp/key.json
     ports:
       - "8000:8000"
     depends_on:
       - postgres
-      - minio
     volumes:
       - .:/app
+      # Point GCP_SA_KEY at your downloaded key JSON on the host, e.g.
+      #   GCP_SA_KEY=~/keys/kubereats-sa.json docker compose up
+      - ${GCP_SA_KEY:-./gcp-sa-key.json}:/var/secrets/gcp/key.json:ro
 
 volumes:
   postgres_data:
-  minio_data:

@@ -6,3 +6,8 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+
+# GCP service-account keys — never commit credentials
+*-sa-key.json
+*-key.json
+gcp-*.json
