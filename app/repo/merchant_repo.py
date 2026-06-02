@@ -102,6 +102,24 @@ class MerchantRepository:
         )
         return results
 
+    def get_today_order_user_ids(
+        self, merchant_id: int, day_start: datetime, day_end: datetime
+    ) -> list[int]:
+        results = (
+            self.db.query(Order.id, Order.user_id)
+            .join(OrderItem, Order.id == OrderItem.order_id)
+            .join(Menu, OrderItem.menu_id == Menu.id)
+            .filter(
+                Menu.merchant_id == merchant_id,
+                Order.order_time >= day_start,
+                Order.order_time < day_end,
+                Order.order_status != 2,
+            )
+            .group_by(Order.id, Order.user_id)
+            .all()
+        )
+        return [row.user_id for row in results]
+
     def get_today_pending_orders(
         self, merchant_id: int, day_start: datetime, day_end: datetime
     ) -> list[Order]:

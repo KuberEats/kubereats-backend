@@ -163,6 +163,9 @@ class MerchantService:
         results = self.merchant_repo.get_today_order_summary(
             merchant.id, day_start, day_end
         )
+        user_ids = self.merchant_repo.get_today_order_user_ids(
+            merchant.id, day_start, day_end
+        )
 
         items = [
             {
@@ -179,6 +182,7 @@ class MerchantService:
             "total_orders": sum(item["total_quantity"] for item in items),
             "total_amount": sum(item["total_amount"] for item in items),
             "items": items,
+            "user_ids": user_ids,
         }
 
     def confirm_today_orders(self, user_id: int) -> dict:

@@ -183,3 +183,4 @@ class TodayOrderSummaryResponse(BaseModel):
     total_orders: int = Field(serialization_alias="totalOrders")
     total_amount: float = Field(serialization_alias="totalAmount")
     items: list[OrderItemSummary]
+    user_ids: list[int] = Field(default_factory=list, serialization_alias="userIds")
