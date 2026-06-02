@@ -213,6 +213,20 @@ def test_list_public_menu_items(db, merchant_service, approved_merchant, test_me
     assert [menu.item_name for menu in result] == ["Burger", "Fries"]
 
 
+def test_business_metric_snapshots_include_availability_and_capacity(
+    merchant_service, approved_merchant, test_menu, today_pending_order
+):
+    snapshots = merchant_service.merchant_repo.list_business_metric_snapshots(
+        date.today()
+    )
+
+    snapshot = next(
+        item for item in snapshots if item["merchant_id"] == str(approved_merchant.id)
+    )
+    assert snapshot["available"] == 1
+    assert snapshot["remaining_capacity"] == test_menu.max_daily_quantity - 1
+
+
 # ── Menu ──
 
 

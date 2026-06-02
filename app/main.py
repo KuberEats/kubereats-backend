@@ -5,9 +5,15 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.logging import setup_logging
+from app.core.metrics import (
+    kubereats_menu_capacity_remaining,
+    kubereats_merchant_available,
+)
 from app.database import Base, engine, get_db
 from app.models import kubereats  # noqa: F401
+from app.repo.merchant_repo import MerchantRepository
 from app.routes.merchant_route import router as merchant_router
+from datetime import date
 
 setup_logging()
 
@@ -54,5 +60,15 @@ def health_ready(db: Session = Depends(get_db)):
 
 
 @app.get("/metrics")
-def metrics():
+def metrics(db: Session = Depends(get_db)):
+    for snapshot in MerchantRepository(db).list_business_metric_snapshots(date.today()):
+        labels = {
+            "campus": snapshot["campus"],
+            "merchant_id": snapshot["merchant_id"],
+        }
+        kubereats_merchant_available.labels(**labels).set(snapshot["available"])
+        kubereats_menu_capacity_remaining.labels(
+            **labels,
+            pickup_slot="daily",
+        ).set(snapshot["remaining_capacity"])
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

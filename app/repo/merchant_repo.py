@@ -133,6 +133,51 @@ class MerchantRepository:
             .all()
         )
 
+    def list_business_metric_snapshots(self, target_date: date) -> list[dict]:
+        merchants = self.db.query(MerchantInfo).options(joinedload(MerchantInfo.menus)).all()
+        ordered_quantities = {
+            row.merchant_id: int(row.total_quantity or 0)
+            for row in (
+                self.db.query(
+                    Menu.merchant_id,
+                    func.sum(OrderItem.quantity).label("total_quantity"),
+                )
+                .join(OrderItem, OrderItem.menu_id == Menu.id)
+                .join(Order, Order.id == OrderItem.order_id)
+                .filter(
+                    func.date(Order.order_time) == target_date,
+                    Order.order_status != 2,
+                )
+                .group_by(Menu.merchant_id)
+                .all()
+            )
+        }
+
+        snapshots = []
+        for merchant in merchants:
+            configured_capacity = sum(menu.max_daily_quantity for menu in merchant.menus)
+            used_capacity = ordered_quantities.get(merchant.id, 0)
+            is_available = (
+                merchant.audit_status == 1
+                and (
+                    merchant.cooperation_start_date is None
+                    or merchant.cooperation_start_date <= target_date
+                )
+                and (
+                    merchant.cooperation_end_date is None
+                    or merchant.cooperation_end_date >= target_date
+                )
+            )
+            snapshots.append(
+                {
+                    "merchant_id": str(merchant.id),
+                    "campus": merchant.campus,
+                    "available": 1 if is_available else 0,
+                    "remaining_capacity": max(0, configured_capacity - used_capacity),
+                }
+            )
+        return snapshots
+
     def commit(self):
         self.db.commit()
 
