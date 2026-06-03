@@ -52,6 +52,9 @@ class TemplateReasonGenerator:
         if signals["matchedTerms"]:
             reasons.append(f"符合你提到的 {', '.join(signals['matchedTerms'])}")
 
+        if signals["weightedScores"]["aiRerank"] > 0:
+            reasons.append("AI 推薦你吃這個")
+
         if signals["recentlyOrdered"] and signals["avoidRecentRelaxed"]:
             reasons.append("這家最近吃過，但因為可選結果較少所以保留")
         elif not signals["recentlyOrdered"] and signals["noveltyScore"] > 0:
