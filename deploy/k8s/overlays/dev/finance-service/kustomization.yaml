@@ -10,4 +10,4 @@ patches:
   - path: patch-service-nodeport.yaml
 images:
   - name: ghcr.io/kubereats/finance-service
-    newTag: b616e22
+    newTag: "b616e22"
