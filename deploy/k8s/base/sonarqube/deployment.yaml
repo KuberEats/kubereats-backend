@@ -35,7 +35,7 @@ spec:
             runAsUser: 0
       containers:
         - name: sonarqube
-          image: sonarqube:lts-community
+          image: sonarqube:26.5.0.122743-community
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
