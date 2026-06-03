@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from app.models.kubereats import Menu, MerchantInfo, UserInfo
 from app.schemas.merchant import (
+    MenuResponse,
     MerchantApplyRequest,
     MerchantUpdateRequest,
     MenuCreateRequest,
@@ -173,6 +174,25 @@ def test_get_public_merchant_detail_requires_approved(merchant_service, test_mer
         merchant_service.get_public_merchant_detail(test_merchant.id)
 
     assert exc.value.status_code == 404
+
+
+def test_menu_response_builds_public_gcs_image_url(approved_merchant, test_menu):
+    test_menu.image_url = "23abd314bb4a4c2597aa639814e243ed.jpg"
+
+    payload = MenuResponse.model_validate(test_menu).model_dump(by_alias=True)
+
+    assert payload["imageUrl"] == (
+        "https://storage.googleapis.com/kubereats-menu-images/"
+        f"{approved_merchant.id}/23abd314bb4a4c2597aa639814e243ed.jpg"
+    )
+
+
+def test_menu_response_preserves_existing_public_image_url(test_menu):
+    test_menu.image_url = "https://cdn.example.com/menu.jpg"
+
+    payload = MenuResponse.model_validate(test_menu).model_dump(by_alias=True)
+
+    assert payload["imageUrl"] == "https://cdn.example.com/menu.jpg"
 
 
 def test_list_public_menu_items(db, merchant_service, approved_merchant, test_menu):

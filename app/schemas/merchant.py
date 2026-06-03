@@ -1,8 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Literal
+from urllib.parse import quote
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_serializer
 
 
 # ── Merchant ──
@@ -156,6 +157,32 @@ class MenuResponse(BaseModel):
     image_url: str | None = Field(default=None, serialization_alias="imageUrl")
     created_at: datetime = Field(serialization_alias="createdAt")
     updated_at: datetime = Field(serialization_alias="updatedAt")
+
+    @field_serializer("image_url")
+    def serialize_image_url(self, value: str | None) -> str | None:
+        return build_public_menu_image_url(value, self.merchant_id)
+
+
+def build_public_menu_image_url(value: str | None, merchant_id: int) -> str | None:
+    if not value:
+        return None
+
+    image_ref = value.strip()
+    if not image_ref:
+        return None
+
+    if image_ref.startswith(("http://", "https://", "/")):
+        return image_ref
+
+    object_name = image_ref.lstrip("/")
+    if not object_name.startswith(f"{merchant_id}/"):
+        object_name = f"{merchant_id}/{object_name}"
+
+    encoded_object_name = quote(object_name, safe="/")
+    return (
+        "https://storage.googleapis.com/kubereats-menu-images/"
+        f"{encoded_object_name}"
+    )
 
 
 class MenuImageUploadResponse(BaseModel):
