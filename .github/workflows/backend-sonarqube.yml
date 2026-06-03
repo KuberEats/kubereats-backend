@@ -1,0 +1,167 @@
+name: Backend SonarQube
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - "module/**"
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: backend-sonarqube-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resolve-services:
+    name: Resolve services to scan
+    runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.resolve.outputs.include }}
+      has_services: ${{ steps.resolve.outputs.has_services }}
+    steps:
+      - name: Select services for this ref
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          all_services='[{"service":"merchant-service","source_ref":"module/merchant","project_name":"KuberEats Merchant Service","python_version":"3.12"},{"service":"committee-service","source_ref":"module/fuwei-system","project_name":"KuberEats Committee Service","python_version":"3.12"},{"service":"verification-service","source_ref":"module/verification","project_name":"KuberEats Verification Service","python_version":"3.12"},{"service":"tagging-service","source_ref":"module/tagging","project_name":"KuberEats Tagging Service","python_version":"3.11"},{"service":"finance-service","source_ref":"module/finance","project_name":"KuberEats Finance Service","python_version":"3.11"},{"service":"recommendation-service","source_ref":"module/recommend","project_name":"KuberEats Recommendation Service","python_version":"3.12"},{"service":"order-scheduler-service","source_ref":"module/order-scheduler","project_name":"KuberEats Order Scheduler Service","python_version":"3.12"},{"service":"order-consumer-service","source_ref":"module/order-consumer","project_name":"KuberEats Order Consumer Service","python_version":"3.12"},{"service":"notification-service","source_ref":"module/notification","project_name":"KuberEats Notification Service","python_version":"3.12"}]'
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            ref="${{ github.head_ref }}"
+          else
+            ref="${{ github.ref_name }}"
+          fi
+
+          case "$ref" in
+            module/merchant)
+              include='[{"service":"merchant-service","source_ref":"module/merchant","project_name":"KuberEats Merchant Service","python_version":"3.12"}]'
+              ;;
+            module/fuwei-system)
+              include='[{"service":"committee-service","source_ref":"module/fuwei-system","project_name":"KuberEats Committee Service","python_version":"3.12"}]'
+              ;;
+            module/verification)
+              include='[{"service":"verification-service","source_ref":"module/verification","project_name":"KuberEats Verification Service","python_version":"3.12"}]'
+              ;;
+            module/tagging)
+              include='[{"service":"tagging-service","source_ref":"module/tagging","project_name":"KuberEats Tagging Service","python_version":"3.11"}]'
+              ;;
+            module/finance)
+              include='[{"service":"finance-service","source_ref":"module/finance","project_name":"KuberEats Finance Service","python_version":"3.11"}]'
+              ;;
+            module/recommend)
+              include='[{"service":"recommendation-service","source_ref":"module/recommend","project_name":"KuberEats Recommendation Service","python_version":"3.12"}]'
+              ;;
+            module/order-scheduler)
+              include='[{"service":"order-scheduler-service","source_ref":"module/order-scheduler","project_name":"KuberEats Order Scheduler Service","python_version":"3.12"}]'
+              ;;
+            module/order-consumer)
+              include='[{"service":"order-consumer-service","source_ref":"module/order-consumer","project_name":"KuberEats Order Consumer Service","python_version":"3.12"}]'
+              ;;
+            module/notification)
+              include='[{"service":"notification-service","source_ref":"module/notification","project_name":"KuberEats Notification Service","python_version":"3.12"}]'
+              ;;
+            main)
+              include="$all_services"
+              ;;
+            module/*)
+              echo "No backend service mapped to ref ${ref}; skipping SonarQube scan."
+              include='[]'
+              ;;
+            *)
+              include="$all_services"
+              ;;
+          esac
+
+          if [[ "$include" == "[]" ]]; then
+            echo "has_services=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_services=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "include=${include}" >> "$GITHUB_OUTPUT"
+
+  sonarqube:
+    name: SonarQube ${{ matrix.service }}
+    needs: resolve-services
+    if: ${{ needs.resolve-services.outputs.has_services == 'true' && github.event_name != 'pull_request' }}
+    runs-on:
+      - self-hosted
+      - kubereats-internal
+      - sonarqube
+      - linux
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.resolve-services.outputs.include) }}
+    env:
+      SONAR_HOST_URL: http://192.168.17.11:31090
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Checkout service source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.source_ref }}
+          path: service-src
+          fetch-depth: 0
+
+      - name: Validate SonarQube token
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error title=Missing SONAR_TOKEN::Add a repository Actions secret named SONAR_TOKEN before running the SonarQube job."
+            exit 1
+          fi
+
+      - name: Write SonarQube project configuration
+        working-directory: service-src
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sources=()
+          for path in app scripts migrations main.py create_dummy_data.py; do
+            if [ -e "$path" ]; then
+              sources+=("$path")
+            fi
+          done
+
+          tests=()
+          for path in tests test; do
+            if [ -d "$path" ]; then
+              tests+=("$path")
+            fi
+          done
+
+          {
+            echo "sonar.projectKey=kubereats-${{ matrix.service }}"
+            echo "sonar.projectName=${{ matrix.project_name }}"
+            echo "sonar.projectVersion=0.1.0"
+            echo "sonar.sourceEncoding=UTF-8"
+            echo "sonar.python.version=${{ matrix.python_version }}"
+            printf 'sonar.sources=%s\n' "$(IFS=,; echo "${sources[*]}")"
+            if [ "${#tests[@]}" -gt 0 ]; then
+              printf 'sonar.tests=%s\n' "$(IFS=,; echo "${tests[*]}")"
+              echo "sonar.test.inclusions=tests/**/*.py,test/**/*.ts"
+            fi
+            echo "sonar.exclusions=**/__pycache__/**,.venv/**,.pytest_cache/**,.ruff_cache/**,node_modules/**,reports/**,coverage/**"
+          } > sonar-project.properties
+
+      - name: Set up Node
+        if: ${{ matrix.service == 'recommendation-service' || matrix.service == 'order-scheduler-service' || matrix.service == 'order-consumer-service' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: service-src/package-lock.json
+
+      - name: Install Node dependencies
+        if: ${{ matrix.service == 'recommendation-service' || matrix.service == 'order-scheduler-service' || matrix.service == 'order-consumer-service' }}
+        working-directory: service-src
+        run: npm ci
+
+      - name: SonarQube scan
+        uses: sonarsource/sonarqube-scan-action@v6
+        with:
+          projectBaseDir: service-src
