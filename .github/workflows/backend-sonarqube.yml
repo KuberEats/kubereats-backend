@@ -92,6 +92,20 @@ jobs:
       - kubereats-internal
       - sonarqube
       - linux
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     strategy:
       fail-fast: false
       matrix:
@@ -99,6 +113,12 @@ jobs:
     env:
       SONAR_HOST_URL: http://192.168.17.11:31090
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      DATABASE_URL: postgresql://postgres:test@localhost:5432/testdb
+      JWT_SECRET_KEY: test-secret-key
+      APP_ENV: ci
+      LOG_LEVEL: info
+      PORT: "8000"
+      KUBEREATS_DB_RESET_MODE: local
     steps:
       - name: Checkout service source
         uses: actions/checkout@v4
@@ -141,12 +161,54 @@ jobs:
             echo "sonar.sourceEncoding=UTF-8"
             echo "sonar.python.version=${{ matrix.python_version }}"
             printf 'sonar.sources=%s\n' "$(IFS=,; echo "${sources[*]}")"
+            echo "sonar.python.coverage.reportPaths=coverage.xml"
             if [ "${#tests[@]}" -gt 0 ]; then
               printf 'sonar.tests=%s\n' "$(IFS=,; echo "${tests[*]}")"
               echo "sonar.test.inclusions=tests/**/*.py,test/**/*.ts"
             fi
             echo "sonar.exclusions=**/__pycache__/**,.venv/**,.pytest_cache/**,.ruff_cache/**,node_modules/**,reports/**,coverage/**"
           } > sonar-project.properties
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python dependencies
+        working-directory: service-src
+        run: |
+          uv sync --dev
+          uv pip install coverage pytest-cov
+
+      - name: Generate Python coverage
+        working-directory: service-src
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -d tests ]; then
+            echo "No Python tests directory found; writing empty coverage report."
+            uv run coverage xml -o coverage.xml
+            exit 0
+          fi
+
+          coverage_args=()
+          for path in app scripts migrations; do
+            if [ -d "$path" ]; then
+              coverage_args+=(--cov="$path")
+            fi
+          done
+
+          if [ "${#coverage_args[@]}" -eq 0 ]; then
+            coverage_args=(--cov=".")
+          fi
+
+          PYTHONPATH="$PWD" uv run pytest tests/ -v "${coverage_args[@]}" --cov-report=xml:coverage.xml
 
       - name: Set up Node
         if: ${{ matrix.service == 'recommendation-service' || matrix.service == 'order-scheduler-service' || matrix.service == 'order-consumer-service' }}
